@@ -1,0 +1,27 @@
+@font-face{font-family:'Gotham Rounded';src:url('/fonts/GothamRounded-Light.woff2') format('woff2');font-weight:300;font-display:swap}
+@font-face{font-family:'Gotham Rounded';src:url('/fonts/GothamRounded-Book.woff2') format('woff2');font-weight:400;font-display:swap}
+@font-face{font-family:'Gotham Rounded';src:url('/fonts/GothamRounded-Medium.woff2') format('woff2');font-weight:500 600;font-display:swap}
+@font-face{font-family:'Gotham Rounded';src:url('/fonts/GothamRounded-Bold.woff2') format('woff2');font-weight:700 800;font-display:swap}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{font-family:'Gotham Rounded',-apple-system,'Segoe UI',Roboto,sans-serif;background:#F5F4F1;color:#231F20;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+a{text-decoration:none;color:inherit}
+button{font-family:inherit}
+@keyframes a7pulse{0%{box-shadow:0 0 0 0 rgba(47,125,82,.5)}70%{box-shadow:0 0 0 7px rgba(47,125,82,0)}100%{box-shadow:0 0 0 0 rgba(47,125,82,0)}}
+@keyframes a7ripple{0%{transform:scale(1);opacity:.55}100%{transform:scale(2.6);opacity:0}}
+@keyframes a7spin{to{transform:rotate(360deg)}}
+@keyframes a7fill{from{width:0}to{width:100%}}
+summary{list-style:none;cursor:pointer;outline:none}
+summary::-webkit-details-marker{display:none}
+.a7chev{transition:transform .2s ease}
+details[open] .a7chev{transform:rotate(180deg)}
+@media(max-width:560px){.a7-desc{display:none}}
+.h-as:hover{opacity:.88}
+.h-cta:hover{transform:translateY(-2px);box-shadow:0 16px 36px rgba(20,20,20,.2)!important}
+.h-cta:active{transform:translateY(0) scale(.985)}
+.h-sec:hover{border-color:#231F20!important}
+.h-price:hover{transform:translateY(-2px);box-shadow:0 16px 34px rgba(20,20,20,.22)!important}
+.h-price:active{transform:translateY(0) scale(.99)}
+.h-sum:hover{color:#AE863F!important}
+.catcard{transition:transform .2s ease,box-shadow .2s ease,border-color .2s ease}
+.catcard:hover{transform:translateY(-4px)!important;box-shadow:0 18px 42px -20px rgba(20,20,20,.22)!important;border-color:#d8d2c4!important}

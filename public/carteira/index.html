@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="Passo a passo simples para baixar o PDF da sua Carteira de Trabalho Digital e anexar na sua candidatura. Leva 2 minutos, de graça, pelo celular.">
+<title>Como mandar sua Carteira de Trabalho em PDF · A7Pro</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  /* ───── Fonte da casa (cai pra Nunito se os arquivos não estiverem no servidor) ───── */
+  @font-face{font-family:'Gotham Rounded';src:url('../assets/fonts/GothamRounded-Book.woff2') format('woff2');font-weight:400;font-display:swap}
+  @font-face{font-family:'Gotham Rounded';src:url('../assets/fonts/GothamRounded-Medium.woff2') format('woff2');font-weight:500 600;font-display:swap}
+  @font-face{font-family:'Gotham Rounded';src:url('../assets/fonts/GothamRounded-Bold.woff2') format('woff2');font-weight:700 800;font-display:swap}
+
+  :root{
+    --tinta:#141414;        /* preto A7 — acento */
+    --cinza:#5e5f63;
+    --cinza-claro:#9b9c9e;
+    --bg:#F7F7F4;           /* base clara neutra */
+    --card:#FFFFFF;
+    --linha:#E8E8E3;
+    --suave:#F0F0EB;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    font-family:'Gotham Rounded','Nunito',-apple-system,'Segoe UI',Roboto,Arial,sans-serif;
+    background:var(--bg); color:var(--tinta); line-height:1.55;
+    -webkit-font-smoothing:antialiased; font-size:16px;
+  }
+  .wrap{max-width:480px;margin:0 auto;padding:0 18px 60px}
+
+  /* ───── Cabeçalho ───── */
+  header{text-align:center;padding:38px 10px 8px}
+  .logo{height:44px;width:auto;margin-bottom:22px}
+  .logo-fallback{
+    display:inline-grid;place-items:center;width:52px;height:52px;border-radius:14px;
+    background:var(--tinta);color:#fff;font-weight:800;font-size:21px;letter-spacing:-1px;margin-bottom:22px;
+  }
+  h1{font-size:27px;line-height:1.18;font-weight:800;letter-spacing:-0.3px;max-width:380px;margin:0 auto}
+  .lead{font-size:15.5px;color:var(--cinza);margin:14px auto 0;max-width:400px}
+  .meta{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin:20px 0 30px}
+  .chip{background:var(--card);border:1px solid var(--linha);border-radius:999px;padding:8px 15px;font-size:13px;color:var(--cinza);font-weight:700}
+  .chip b{color:var(--tinta)}
+
+  /* ───── Passos ───── */
+  .step{
+    background:var(--card);border:1px solid var(--linha);border-radius:20px;
+    padding:22px 20px 24px;margin-bottom:16px;
+  }
+  .step-top{display:flex;gap:14px;align-items:flex-start;margin-bottom:6px}
+  .num{
+    flex:0 0 38px;height:38px;background:var(--tinta);color:#fff;border-radius:12px;
+    display:grid;place-items:center;font-weight:800;font-size:18px;
+  }
+  .step h2{font-size:18px;font-weight:800;line-height:1.25;padding-top:6px;letter-spacing:-0.2px}
+  .step .txt{font-size:15px;color:var(--cinza);margin:8px 2px 0}
+  .step .txt b{color:var(--tinta);font-weight:700}
+  .step .txt + .txt{margin-top:8px}
+
+  /* marcador ① ② dentro do texto */
+  .k{
+    display:inline-grid;place-items:center;width:21px;height:21px;border-radius:50%;
+    background:var(--tinta);color:#fff;font-size:12.5px;font-weight:800;vertical-align:-4px;margin-right:2px;
+  }
+
+  /* ───── Print com anel ───── */
+  .shot{
+    position:relative;max-width:300px;margin:18px auto 0;border-radius:18px;overflow:hidden;
+    border:1px solid var(--linha);box-shadow:0 10px 28px rgba(20,20,20,.10);
+    background:var(--suave);
+  }
+  .shot img{display:block;width:100%;height:auto}
+  .shot.banner{max-width:100%;border-radius:14px}
+  .caption{font-size:12.5px;color:var(--cinza-claro);text-align:center;margin-top:10px}
+
+  .ring{
+    position:absolute;border:3px solid var(--tinta);border-radius:14px;pointer-events:none;
+    box-shadow:0 0 0 2.5px rgba(255,255,255,.95), inset 0 0 0 2.5px rgba(255,255,255,.95);
+    animation:pulse 2.2s ease-in-out infinite;
+  }
+  .ring.round{border-radius:50%}
+  .ring .n{
+    position:absolute;top:-13px;left:-13px;width:25px;height:25px;border-radius:50%;
+    background:var(--tinta);color:#fff;display:grid;place-items:center;
+    font-size:13px;font-weight:800;box-shadow:0 0 0 2.5px #fff;animation:none;
+  }
+  .ring .n.right{left:auto;right:-13px}
+  @keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.035)}}
+  @media (prefers-reduced-motion: reduce){.ring{animation:none}}
+
+  /* ───── Avisos ───── */
+  .note{
+    border:1.5px solid var(--linha);background:var(--suave);
+    padding:14px 16px;border-radius:14px;margin:16px 0 0;font-size:14px;color:var(--cinza);
+  }
+  .note b{color:var(--tinta)}
+  .note.dark{background:var(--tinta);border-color:var(--tinta);color:rgba(255,255,255,.85)}
+  .note.dark b{color:#fff}
+
+  /* slot pendente (sai antes de publicar) */
+  .todo{
+    border:2px dashed var(--cinza-claro);border-radius:14px;padding:16px;margin-top:14px;
+    font-size:13px;color:var(--cinza-claro);text-align:center;
+  }
+
+  h2.sec{font-size:12.5px;letter-spacing:2.4px;text-transform:uppercase;color:var(--cinza-claro);font-weight:800;margin:34px 6px 14px}
+
+  /* ───── FAQ ───── */
+  .faq{background:var(--card);border:1px solid var(--linha);border-radius:20px;padding:4px 20px}
+  details{border-bottom:1px solid var(--linha);padding:16px 0}
+  details:last-child{border-bottom:none}
+  summary{font-weight:700;font-size:15px;cursor:pointer;list-style:none;display:flex;justify-content:space-between;align-items:center;gap:12px;min-height:24px}
+  summary::-webkit-details-marker{display:none}
+  summary::after{content:"+";color:var(--tinta);font-weight:800;font-size:21px;flex:0 0 auto}
+  details[open] summary::after{content:"–"}
+  details p{font-size:14px;color:var(--cinza);margin-top:10px}
+  details p b{color:var(--tinta)}
+
+  /* ───── Socorro ───── */
+  .help{margin-top:32px;background:var(--card);border:1px solid var(--linha);border-radius:20px;padding:26px 22px;text-align:center}
+  .help h3{font-size:18px;font-weight:800;letter-spacing:-0.2px}
+  .help p{font-size:14.5px;color:var(--cinza);margin:8px 0 18px}
+  .btn-wpp{
+    display:inline-flex;align-items:center;justify-content:center;gap:10px;
+    background:var(--tinta);color:#fff;font-weight:800;font-size:16px;text-decoration:none;
+    padding:16px 26px;border-radius:14px;width:100%;max-width:330px;min-height:54px;
+  }
+  .btn-wpp:active{transform:scale(.985)}
+
+  footer{text-align:center;color:var(--cinza-claro);font-size:12px;margin-top:30px;line-height:1.8}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <img class="logo" src="../assets/a7_logo_dark.svg" alt="A7Pro"
+         onerror="this.replaceWith(Object.assign(document.createElement('div'),{className:'logo-fallback',textContent:'A7'}))">
+    <h1>Como mandar sua Carteira de Trabalho em PDF</h1>
+    <p class="lead">É a Carteira de Trabalho <b>Digital</b>, do Governo. Sai na hora, pelo celular, sem pagar nada. Siga os passos com calma — e se travar, é só chamar a gente no fim da página.</p>
+  </header>
+
+  <div class="meta">
+    <span class="chip">⏱️ <b>2 minutos</b></span>
+    <span class="chip">📱 <b>só o celular</b></span>
+    <span class="chip">🆓 <b>de graça</b></span>
+  </div>
+
+  <!-- PASSO 1 -->
+  <div class="step">
+    <div class="step-top">
+      <div class="num">1</div>
+      <h2>Baixe o app Carteira de Trabalho Digital</h2>
+    </div>
+    <p class="txt">Abra a <b>loja de aplicativos</b> do seu celular (Play Store ou App Store) e procure por <b>Carteira de Trabalho Digital</b>. É o app do Governo — de graça, ícone azul com o brasão do Brasil. Toque em <b>Instalar</b> e depois em <b>Abrir</b>.</p>
+    <div class="shot banner">
+      <img src="prints/01-app-loja.jpg" alt="App Carteira de Trabalho Digital na loja de aplicativos: ícone azul com brasão do Brasil" width="720" height="188" loading="lazy">
+    </div>
+    <p class="txt" style="margin-top:12px">Já tem o app no celular? Pode pular pro passo 2.</p>
+  </div>
+
+  <!-- PASSO 2 -->
+  <div class="step">
+    <div class="step-top">
+      <div class="num">2</div>
+      <h2>Toque em Entrar com gov.br</h2>
+    </div>
+    <p class="txt">Na primeira tela do app, toque no botão azul <b>Entrar com gov.br</b>.</p>
+    <div class="shot">
+      <img src="prints/02-abrir-app.jpg" alt="Tela inicial do app, com o botão azul Entrar com gov.br" width="720" height="1561" loading="lazy">
+      <span class="ring" style="left:4.5%;top:64%;width:91%;height:6.6%"></span>
+    </div>
+  </div>
+
+  <!-- PASSO 3 -->
+  <div class="step">
+    <div class="step-top">
+      <div class="num">3</div>
+      <h2>Digite seu CPF e a senha do gov.br</h2>
+    </div>
+    <p class="txt"><span class="k">1</span> Digite seu <b>CPF</b> e toque em <span class="k">2</span> <b>Continuar</b>. Depois é só colocar a sua <b>senha do gov.br</b> — a mesma conta que se usa no Meu INSS e em outros serviços do Governo.</p>
+    <div class="shot">
+      <img src="prints/03-login-cpf.jpg" alt="Tela do gov.br pedindo o número do CPF, com o botão Continuar logo abaixo" width="720" height="1561" loading="lazy">
+      <span class="ring" style="left:11.5%;top:40.9%;width:77%;height:5.6%"><span class="n">1</span></span>
+      <span class="ring" style="left:11.5%;top:48.3%;width:77%;height:5.7%"><span class="n">2</span></span>
+    </div>
+    <div class="note">Pode aparecer algum <b>aviso</b> no caminho — cada celular mostra um diferente. Toque em <b>Continuar</b> ou <b>Permitir</b> sem medo: o app é oficial do Governo.</div>
+    <div class="note">Esqueceu a senha? Tem jeito rápido — <a href="#faq" style="color:var(--tinta);font-weight:700">veja aqui embaixo</a>.</div>
+  </div>
+
+  <!-- PASSO 4 -->
+  <div class="step">
+    <div class="step-top">
+      <div class="num">4</div>
+      <h2>Toque em Enviar Carteira de Trabalho Digital</h2>
+    </div>
+    <p class="txt">Depois de entrar, procure o cartão escrito <b>Enviar Carteira de Trabalho Digital</b> e toque nele.</p>
+    <div class="shot">
+      <img src="prints/04-home.jpg" alt="Tela principal do app, com o cartão Enviar Carteira de Trabalho Digital marcado" width="720" height="1561" loading="lazy">
+      <span class="ring" style="left:1.5%;top:60.9%;width:49%;height:15.7%"></span>
+    </div>
+  </div>
+
+  <!-- PASSO 5 -->
+  <div class="step">
+    <div class="step-top">
+      <div class="num">5</div>
+      <h2>Marque "Todos os dados da carteira"</h2>
+    </div>
+    <p class="txt"><span class="k">1</span> Toque no quadradinho <b>Todos os dados da carteira</b>. <span class="k">2</span> Depois toque no botão azul redondo escrito <b>PDF</b>, no canto de baixo da tela.</p>
+    <div class="shot">
+      <img src="prints/05-selecao.jpg" alt="Tela de envio: quadradinho Todos os dados da carteira em cima e botão azul PDF no canto inferior" width="720" height="1561" loading="lazy">
+      <span class="ring" style="left:1.8%;top:19.4%;width:52.5%;height:4.6%"><span class="n">1</span></span>
+      <span class="ring round" style="left:78.4%;top:81.2%;width:15.2%;height:7%"><span class="n right">2</span></span>
+    </div>
+  </div>
+
+  <!-- PASSO 6 -->
+  <div class="step">
+    <div class="step-top">
+      <div class="num">6</div>
+      <h2>Toque em ENVIAR</h2>
+    </div>
+    <p class="txt">O app mostra a sua carteira pronta. Desça a tela até o fim e toque no botão azul <b>ENVIAR</b>.</p>
+    <div class="shot">
+      <img src="prints/06-enviar.jpg" alt="Documento da carteira pronto, com o botão azul ENVIAR embaixo" width="720" height="1561" loading="lazy">
+      <span class="ring" style="left:3%;top:89.7%;width:94%;height:7%"></span>
+    </div>
+    <div class="note dark"><b>Apareceu "Não há contratos de trabalho"?</b> Tudo bem! Só quer dizer que você ainda não trabalhou de carteira assinada. <b>Manda assim mesmo — isso não tira você da vaga.</b> Aqui a gente dá valor pra quem está começando.</div>
+  </div>
+
+  <!-- PASSO 7 -->
+  <div class="step">
+    <div class="step-top">
+      <div class="num">7</div>
+      <h2>Guarde o PDF e anexe no formulário da vaga</h2>
+    </div>
+    <p class="txt">Vai abrir um menu pra escolher o que fazer com o arquivo. Toque em <b>Salvar</b> (em alguns celulares aparece <b>Salvar no celular</b> ou <b>Salvar em Arquivos</b>).</p>
+    <div class="shot">
+      <img src="prints/07-menu-compartilhar.jpg" alt="Menu do celular com opções de salvar ou compartilhar o PDF da carteira" width="720" height="1561" loading="lazy">
+    </div>
+    <p class="caption">Essa tela muda de um celular pro outro — o seu pode mostrar as opções de outro jeito.</p>
+    <p class="txt" style="margin-top:14px">Agora é só voltar no <b>formulário da vaga</b>, tocar em <b>“Anexe o PDF da sua Carteira de Trabalho Digital”</b> e escolher o arquivo que você salvou. Ele costuma aparecer em <b>Recentes</b> ou <b>Downloads</b>.</p>
+    <!-- PEÇA 3: reativar quando o campo de anexo existir no form
+    <div class="todo">[ print do campo no formulário ]</div> -->
+
+  </div>
+
+  <h2 class="sec" id="faq">Deu algum problema?</h2>
+  <div class="faq">
+    <details>
+      <summary>Esqueci minha senha do gov.br</summary>
+      <p>Na tela de entrada, toque em <b>"Esqueci minha senha"</b>. Dá pra recuperar na hora, por SMS, e-mail ou pelo aplicativo do seu banco. Se travar, chama a gente no WhatsApp aqui embaixo.</p>
+    </details>
+    <details>
+      <summary>Apareceu "Não há contratos de trabalho"</summary>
+      <p>É assim mesmo pra quem ainda não teve registro em carteira — e tudo bem. <b>Manda o PDF do jeito que está.</b> Você não perde a vaga por isso.</p>
+    </details>
+    <details>
+      <summary>Não quero instalar o app (ou o celular está sem espaço)</summary>
+      <p>Dá pra fazer tudo pelo navegador, sem instalar nada: entre em <b>servicos.mte.gov.br</b> com a sua conta gov.br e gere o PDF por lá, do mesmo jeito.</p>
+    </details>
+    <details>
+      <summary>Salvei o PDF mas não acho o arquivo</summary>
+      <p>No campo de anexar do formulário, procure nas pastas <b>Recentes</b> ou <b>Downloads</b>. Se não achar, manda mensagem pra gente no WhatsApp que resolvemos juntos.</p>
+    </details>
+  </div>
+
+  <div class="help">
+    <h3>Travou em algum passo?</h3>
+    <p>Ninguém fica pra trás. Chama a gente que resolvemos juntos, na hora.</p>
+    <a class="btn-wpp" href="https://wa.me/5571996347896?text=Oi!%20Preciso%20de%20ajuda%20pra%20pegar%20minha%20Carteira%20de%20Trabalho%20Digital." target="_blank" rel="noopener">💬 Chamar o RH no WhatsApp</a>
+  </div>
+
+  <footer>
+    A Carteira de Trabalho Digital é um serviço oficial e gratuito do Governo Federal (gov.br).<br>
+    A7Pro · Salvador/BA
+  </footer>
+
+</div>
+</body>
+</html>
