@@ -5,7 +5,7 @@ import { siteUrl } from "@/lib/site";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-export async function POST() {
+export async function POST(req: Request) {
   const priceId = process.env.STRIPE_PRICE_ID;
   if (!stripe || !priceId) {
     return NextResponse.json(
@@ -13,18 +13,21 @@ export async function POST() {
       { status: 500 }
     );
   }
+  // Base de retorno = o domínio de onde o cliente veio (origin/host).
+  // Assim o /sucesso e /cancelado funcionam tanto no *.vercel.app quanto no
+  // domínio custom, sem depender de DNS já estar propagado. Fallback: siteUrl.
+  const h = req.headers;
+  const origin =
+    h.get("origin") ||
+    (h.get("host") ? `https://${h.get("host")}` : siteUrl);
   try {
-    // Checkout Session hospedado, modo assinatura. Apple Pay e Cartão aparecem
-    // automaticamente (Stripe cuida da verificação de domínio do Apple Pay).
-    // Os meios de pagamento seguem o que está habilitado no Dashboard do Stripe
-    // (habilite Pix lá quando o CNPJ estiver ativo).
     const session = await stripe.checkout.sessions.create({
       mode: "subscription",
       line_items: [{ price: priceId, quantity: 1 }],
       allow_promotion_codes: true,
       billing_address_collection: "auto",
-      success_url: `${siteUrl}/sucesso?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${siteUrl}/cancelado`,
+      success_url: `${origin}/sucesso?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${origin}/cancelado`,
     });
     return NextResponse.json({ url: session.url });
   } catch (e) {
