@@ -5,33 +5,46 @@ import { siteUrl } from "@/lib/site";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-export async function POST(req: Request) {
+function baseUrl(req: Request): string {
+  const h = req.headers;
+  return h.get("origin") || (h.get("host") ? `https://${h.get("host")}` : siteUrl);
+}
+
+async function createSession(origin: string) {
   const priceId = process.env.STRIPE_PRICE_ID;
-  if (!stripe || !priceId) {
+  if (!stripe || !priceId) return null;
+  return stripe.checkout.sessions.create({
+    mode: "subscription",
+    line_items: [{ price: priceId, quantity: 1 }],
+    allow_promotion_codes: true,
+    billing_address_collection: "auto",
+    success_url: `${origin}/sucesso?session_id={CHECKOUT_SESSION_ID}`,
+    cancel_url: `${origin}/cancelado`,
+  });
+}
+
+// GET: navegação direta do botão. Cria a sessão e redireciona (303) pro Stripe.
+// Robusto ao redirect apex→www: navegação de topo segue redirects sem CORS.
+export async function GET(req: Request) {
+  const origin = baseUrl(req);
+  try {
+    const session = await createSession(origin);
+    if (!session?.url) return NextResponse.redirect(`${origin}/cancelado?e=config`, 303);
+    return NextResponse.redirect(session.url, 303);
+  } catch {
+    return NextResponse.redirect(`${origin}/cancelado?e=erro`, 303);
+  }
+}
+
+// POST: mantido para uso programático (retorna JSON com a url).
+export async function POST(req: Request) {
+  const origin = baseUrl(req);
+  const session = await createSession(origin).catch(() => null);
+  if (!session?.url) {
     return NextResponse.json(
-      { error: "Stripe não configurado (faltam STRIPE_SECRET_KEY/STRIPE_PRICE_ID)." },
+      { error: "Checkout indisponível no momento." },
       { status: 500 }
     );
   }
-  // Base de retorno = o domínio de onde o cliente veio (origin/host).
-  // Assim o /sucesso e /cancelado funcionam tanto no *.vercel.app quanto no
-  // domínio custom, sem depender de DNS já estar propagado. Fallback: siteUrl.
-  const h = req.headers;
-  const origin =
-    h.get("origin") ||
-    (h.get("host") ? `https://${h.get("host")}` : siteUrl);
-  try {
-    const session = await stripe.checkout.sessions.create({
-      mode: "subscription",
-      line_items: [{ price: priceId, quantity: 1 }],
-      allow_promotion_codes: true,
-      billing_address_collection: "auto",
-      success_url: `${origin}/sucesso?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${origin}/cancelado`,
-    });
-    return NextResponse.json({ url: session.url });
-  } catch (e) {
-    const msg = e instanceof Error ? e.message : "Erro ao criar a sessão de checkout.";
-    return NextResponse.json({ error: msg }, { status: 500 });
-  }
+  return NextResponse.json({ url: session.url });
 }

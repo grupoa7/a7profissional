@@ -12,18 +12,12 @@ type Variant = "hero" | "price" | "header";
 
 export function SubscribeButton({ variant }: { variant: Variant }) {
   const [loading, setLoading] = useState(false);
-  async function go() {
+  // Navegação de página direta pro endpoint GET (que redireciona pro Stripe).
+  // Evita fetch/CORS — funciona mesmo com o redirect apex->www.
+  function go() {
     if (loading) return;
     setLoading(true);
-    try {
-      const r = await fetch("/api/checkout", { method: "POST" });
-      const j = await r.json();
-      if (j?.url) { window.location.href = j.url; return; }
-      alert("Checkout indisponível no momento. Tente novamente em instantes.");
-    } catch {
-      alert("Não foi possível iniciar o checkout. Tente novamente.");
-    }
-    setLoading(false);
+    window.location.href = "/api/checkout";
   }
 
   if (variant === "header") {
