@@ -21,6 +21,9 @@ const S = {
 
 // Selos exibíveis (classificação positiva). B/C/NOVATA nunca aparecem.
 const SELOS_EXIBIVEIS = new Set(["A", "AA", "AAA"]);
+// Valor interno do banco: função ainda não classificada. NUNCA vira filtro na vitrine
+// nem aparece pra empresa — o card carrega como se a função fosse null até o Hugo conferir.
+const FUNCAO_A_CONFERIR = "A CONFERIR";
 // Frescor (CX 4): começa folgado e aperta com dado real. Calibrável.
 export const FRESHNESS_DAYS = 45;
 
@@ -114,7 +117,9 @@ function exibivel(node: RawRecord): boolean {
 function toCard(node: RawRecord): TalentCard {
   const selo = (rawVal(node, S.rating) as string).trim() as TalentCard["selo"];
   const nome = (rawVal(node, S.nome) as string | null) ?? "";
-  const funcao = (rawVal(node, S.funcao) as string | null)?.trim() || null;
+  const funcaoRaw = (rawVal(node, S.funcao) as string | null)?.trim() || null;
+  // 'A CONFERIR' é interno: trata como não-classificada (null) — não exibe nem filtra.
+  const funcao = funcaoRaw && funcaoRaw !== FUNCAO_A_CONFERIR ? funcaoRaw : null;
   return {
     id: node.id,
     nomeParcial: nomeParcial(nome),
