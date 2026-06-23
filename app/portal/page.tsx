@@ -14,12 +14,19 @@ export const metadata: Metadata = {
 export const dynamic = "force-dynamic";
 
 export default async function PortalPage() {
+  // TRAVA DE ACESSO (piso jurídico, Anexo 4.1): perfis do Bloco 1 só podem ser
+  // servidos a assinante ativo. Enquanto o login (Checkpoint 3) não existe, NÃO
+  // enviamos identidades ao cliente. A flag PORTAL_DOGFOOD habilita só em ambiente
+  // controlado; o gate real de assinatura substitui isto no Checkpoint 3.
+  const liberado = process.env.PORTAL_DOGFOOD === "1";
   let cards: TalentCard[] = [];
   let erro = false;
-  try {
-    cards = await getTalentCards();
-  } catch {
-    erro = true;
+  if (liberado) {
+    try {
+      cards = await getTalentCards();
+    } catch {
+      erro = true;
+    }
   }
   const funcoes = Array.from(new Set(cards.map((c) => c.funcao).filter((f): f is string => !!f))).sort();
 
