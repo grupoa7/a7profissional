@@ -1,9 +1,12 @@
 import type { Metadata } from "next";
+import { redirect } from "next/navigation";
 import "./portal.css";
 import { getTalentCards, type TalentCard } from "@/lib/talent";
+import { getSession, isDogfood } from "@/lib/auth";
+import { isActiveSubscriber } from "@/lib/db";
 import { Vitrine } from "./Vitrine";
 
-// Enquanto o gate de login (Checkpoint 3) não existe, mantém fora dos buscadores.
+// Fora dos buscadores.
 export const metadata: Metadata = {
   title: "A7Pro · Banco de Talentos — Portal da Empresa",
   robots: { index: false, follow: false },
@@ -14,19 +17,23 @@ export const metadata: Metadata = {
 export const dynamic = "force-dynamic";
 
 export default async function PortalPage() {
-  // TRAVA DE ACESSO (piso jurídico, Anexo 4.1): perfis do Bloco 1 só podem ser
-  // servidos a assinante ativo. Enquanto o login (Checkpoint 3) não existe, NÃO
-  // enviamos identidades ao cliente. A flag PORTAL_DOGFOOD habilita só em ambiente
-  // controlado; o gate real de assinatura substitui isto no Checkpoint 3.
-  const liberado = process.env.PORTAL_DOGFOOD === "1";
+  // TRAVA DE ACESSO (piso jurídico, Anexo 4.1): os perfis do Bloco 1 só podem ser
+  // servidos a quem (a) tem sessão válida E (b) é assinante ativo OU está na
+  // allowlist de dogfood. Sem isso, NENHUMA identidade é buscada nem trafega: a
+  // chamada a getTalentCards() acontece SÓ depois do gate aprovar.
+  const session = getSession();
+  if (!session) redirect("/entrar");
+
+  let liberado = isDogfood(session.email);
+  if (!liberado) liberado = await isActiveSubscriber(session.email);
+  if (!liberado) redirect("/entrar?status=sem-acesso");
+
   let cards: TalentCard[] = [];
   let erro = false;
-  if (liberado) {
-    try {
-      cards = await getTalentCards();
-    } catch {
-      erro = true;
-    }
+  try {
+    cards = await getTalentCards();
+  } catch {
+    erro = true;
   }
   const funcoes = Array.from(new Set(cards.map((c) => c.funcao).filter((f): f is string => !!f))).sort();
 
@@ -35,7 +42,7 @@ export default async function PortalPage() {
       <header>
         <div className="hd">
           <div className="logo"><span className="mk">a7</span>pro <span className="sub">Banco de Talentos</span></div>
-          <div className="who">Empresa parceira · <b>Plano Fundador</b></div>
+          <div className="who">{session.email} · <b>Plano Fundador</b><br /><a href="/api/auth/sair" style={{ color: "#9b9c9e", fontSize: 11.5 }}>Sair</a></div>
         </div>
       </header>
 
