@@ -68,10 +68,29 @@ function nomeParcial(nome: string): string {
   return `${parts[0]} ${parts[1][0].toUpperCase()}.`;
 }
 
-function diasDesde(iso: string): number {
+// Datas do banco vêm em DD/MM/YYYY. Converte para ISO (YYYY-MM-DD).
+function parseISO(s: string | null): string | null {
+  if (!s) return null;
+  const t = s.trim();
+  const br = t.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+  if (br) return `${br[3]}-${br[2]}-${br[1]}`;
+  if (/^\d{4}-\d{2}-\d{2}/.test(t)) return t.slice(0, 10);
+  return null;
+}
+function diasDesde(s: string | null): number {
+  const iso = parseISO(s);
+  if (!iso) return Infinity;
   const t = Date.parse(iso);
   if (Number.isNaN(t)) return Infinity;
   return Math.floor((Date.now() - t) / 86_400_000);
+}
+// Dias vêm por extenso no banco ("Segunda"…"Domingo"); a UI usa abreviado.
+const DIA_MAP: Record<string, string> = {
+  Domingo: "Dom", Segunda: "Seg", "Terça": "Ter", Quarta: "Qua",
+  Quinta: "Qui", Sexta: "Sex", "Sábado": "Sáb",
+};
+function normDias(arr: string[]): string[] {
+  return arr.map((d) => DIA_MAP[d] ?? d);
 }
 
 /** Regra de EXIBÍVEL — o filtro de compliance que NUNCA relaxa (mesmo no cold-start). */
@@ -101,12 +120,12 @@ function toCard(node: RawRecord): TalentCard {
     nomeParcial: nomeParcial(nome),
     funcao,
     selo,
-    dias: asArray(rawVal(node, S.dias)),
+    dias: normDias(asArray(rawVal(node, S.dias))),
     turnos: asArray(rawVal(node, S.turnos)),
     valorSegSex: asMoney(rawVal(node, S.valSegSex)),
     valorFds: asMoney(rawVal(node, S.valFds)),
     trabalhosConcluidos: 0, // Fase 2: virá do motor de reputação
-    atualizadoEm: (rawVal(node, S.dataPrefs) as string | null) ?? null,
+    atualizadoEm: parseISO(rawVal(node, S.dataPrefs) as string | null),
   };
 }
 

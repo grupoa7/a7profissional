@@ -9,7 +9,9 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
-export const revalidate = 120;
+// Página dinâmica: renderiza a cada request (os dados já têm cache de 120s na
+// camada talent.ts). Evita servir um prerender estático preso em estado antigo.
+export const dynamic = "force-dynamic";
 
 export default async function PortalPage() {
   let cards: TalentCard[] = [];

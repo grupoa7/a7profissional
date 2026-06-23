@@ -1,26 +1,12 @@
 import { NextResponse } from "next/server";
-import { pipefyQuery } from "@/lib/pipefy";
+import { getTalentCards } from "@/lib/talent";
 export const dynamic = "force-dynamic";
-const PII = new Set(["nome", "cpf", "telefone"]);
 export async function GET() {
   const info: Record<string, unknown> = {};
   try {
-    const d: any = await pipefyQuery(
-      `query($id:ID!){ table(id:$id){ table_records(first:8){ edges{ node{ id record_fields{ field{id} value array_value } } } } } }`,
-      { id: "ZxbYr_AS" },
-    );
-    const edges = d.table.table_records.edges as any[];
-    info.totalAmostra = edges.length;
-    info.registros = edges.map((e) => {
-      const f: Record<string, unknown> = {};
-      for (const rf of e.node.record_fields) {
-        const id = rf.field?.id;
-        if (!id || PII.has(id)) continue;
-        const v = rf.array_value && rf.array_value.length ? rf.array_value : rf.value;
-        f[id] = v;
-      }
-      return f;
-    });
+    const cards = await getTalentCards();
+    info.count = cards.length;
+    info.sample = cards.slice(0, 3).map((c) => ({ nome: c.nomeParcial, selo: c.selo, dias: c.dias, turnos: c.turnos, vsex: c.valorSegSex, vfds: c.valorFds, at: c.atualizadoEm, func: c.funcao }));
   } catch (e) {
     info.err = String(e instanceof Error ? e.message : e).slice(0, 400);
   }
