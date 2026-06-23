@@ -7,6 +7,24 @@ import { neon } from "@neondatabase/serverless";
 const url = process.env.DATABASE_URL;
 export const sql = url ? neon(url) : null;
 
+// Cria a tabela de forma idempotente. Chamado antes de cada escrita (webhook),
+// então o schema "nasce" na primeira assinatura, sem passo manual de console.
+// CREATE TABLE IF NOT EXISTS é no-op barato quando a tabela já existe.
+let schemaReady = false;
+async function ensureSchema(): Promise<void> {
+  if (!sql || schemaReady) return;
+  await sql`
+    create table if not exists subscriber (
+      email text primary key,
+      stripe_customer_id text,
+      status text not null default 'inactive',
+      current_period_end timestamptz,
+      updated_at timestamptz not null default now()
+    )
+  `;
+  schemaReady = true;
+}
+
 /** Assinante com acesso liberado? (status pagante E período vigente). */
 export async function isActiveSubscriber(email: string): Promise<boolean> {
   if (!sql) return false;
@@ -36,6 +54,7 @@ export async function upsertSubscriber(p: {
   currentPeriodEnd?: Date | null;
 }): Promise<void> {
   if (!sql) throw new Error("DATABASE_URL ausente — não dá para registrar assinante.");
+  await ensureSchema();
   const e = p.email.trim().toLowerCase();
   const cpe = p.currentPeriodEnd ? p.currentPeriodEnd.toISOString() : null;
   await sql`
