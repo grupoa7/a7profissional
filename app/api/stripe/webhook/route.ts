@@ -1,9 +1,10 @@
 // Webhook do Stripe → registra/atualiza o assinante no Neon.
-// Resolve o e-mail SEMPRE pelo customer do Stripe, para que os eventos de
-// subscription (que vêm com customer, não com e-mail) consigam casar a linha.
+// Princípio de segurança: o e-mail e o status/vigência vêm SEMPRE da assinatura e do
+// Customer do Stripe (fonte confiável), nunca do campo livre digitado no checkout.
+// Assim ninguém ativa o e-mail de terceiro nem fica "ativo" sem prazo de vigência.
 import { NextResponse } from "next/server";
 import { stripe } from "@/lib/stripe";
-import { upsertSubscriber } from "@/lib/db";
+import { upsertSubscriber, setStatusByCustomerId } from "@/lib/db";
 import type Stripe from "stripe";
 
 export const runtime = "nodejs";
@@ -20,6 +21,21 @@ async function emailForCustomer(customerId: string | null): Promise<string | nul
     /* ignora — cai pro null */
   }
   return null;
+}
+
+// Aplica o estado de UMA assinatura ao banco. E-mail só do Customer; status/vigência
+// só da própria assinatura. Se o Customer foi deletado (sem e-mail resolvível), ainda
+// assim revoga/atualiza pelo stripe_customer_id.
+async function aplicarAssinatura(sub: Stripe.Subscription, statusForcado?: string) {
+  const customerId = (sub.customer as string) ?? null;
+  const status = statusForcado ?? sub.status;
+  const cpe = sub.current_period_end ? new Date(sub.current_period_end * 1000) : null;
+  const email = await emailForCustomer(customerId);
+  if (email) {
+    await upsertSubscriber({ email, stripeCustomerId: customerId, status, currentPeriodEnd: cpe });
+  } else if (customerId) {
+    await setStatusByCustomerId(customerId, status);
+  }
 }
 
 export async function POST(req: Request) {
@@ -40,49 +56,30 @@ export async function POST(req: Request) {
   try {
     switch (event.type) {
       case "checkout.session.completed": {
+        // Não confiamos no e-mail do checkout: buscamos a assinatura e tratamos como
+        // os demais eventos (status e vigência reais, e-mail do Customer).
         const s = event.data.object as Stripe.Checkout.Session;
-        const customerId = (s.customer as string) ?? null;
-        const email =
-          s.customer_details?.email ??
-          s.customer_email ??
-          (await emailForCustomer(customerId));
-        if (email) {
-          await upsertSubscriber({
-            email,
-            stripeCustomerId: customerId,
-            status: "active",
-            currentPeriodEnd: null, // o evento de subscription preenche o período
-          });
+        if (s.subscription) {
+          const sub = await stripe.subscriptions.retrieve(s.subscription as string);
+          await aplicarAssinatura(sub);
         }
         break;
       }
       case "customer.subscription.created":
-      case "customer.subscription.updated":
+      case "customer.subscription.updated": {
+        await aplicarAssinatura(event.data.object as Stripe.Subscription);
+        break;
+      }
       case "customer.subscription.deleted": {
-        const sub = event.data.object as Stripe.Subscription;
-        const customerId = (sub.customer as string) ?? null;
-        const email = await emailForCustomer(customerId);
-        if (email) {
-          const status =
-            event.type === "customer.subscription.deleted" ? "canceled" : sub.status;
-          const cpe = sub.current_period_end
-            ? new Date(sub.current_period_end * 1000)
-            : null;
-          await upsertSubscriber({
-            email,
-            stripeCustomerId: customerId,
-            status,
-            currentPeriodEnd: cpe,
-          });
-        }
+        await aplicarAssinatura(event.data.object as Stripe.Subscription, "canceled");
         break;
       }
       default:
         break;
     }
   } catch (e) {
-    // Não devolve 5xx ao Stripe por falha de gravação transitória: loga e confirma
-    // recebimento para evitar reentrega infinita. (Idempotente no upsert.)
+    // Não devolve 5xx ao Stripe por falha transitória de gravação: loga e confirma
+    // recebimento para evitar reentrega infinita. (Upsert é idempotente.)
     console.error("[A7Pro] webhook upsert falhou:", e instanceof Error ? e.message : e);
   }
 

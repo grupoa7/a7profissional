@@ -33,6 +33,9 @@ export default function EntrarPage({
   searchParams: { status?: string };
 }) {
   const msg = searchParams.status ? MSGS[searchParams.status] : null;
+  // Só auto-foca no primeiro acesso. Na tela de resultado (com mensagem), evitar o
+  // foco impede o iOS de reabrir o teclado e rolar pra longe do aviso de sucesso.
+  const autoFocar = !msg;
 
   return (
     <div className="entrar-wrap">
@@ -60,7 +63,7 @@ export default function EntrarPage({
             autoComplete="email"
             placeholder="voce@empresa.com.br"
             required
-            autoFocus
+            autoFocus={autoFocar}
           />
           <button className="entrar-btn" type="submit">
             Receber link de acesso →

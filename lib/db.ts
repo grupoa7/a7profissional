@@ -46,6 +46,22 @@ export async function isActiveSubscriber(email: string): Promise<boolean> {
   }
 }
 
+/** Atualiza status pelo stripe_customer_id quando o e-mail não pôde ser resolvido
+ * (ex.: customer deletado no Stripe). Garante revogação de acesso mesmo nesse caso. */
+export async function setStatusByCustomerId(customerId: string, status: string): Promise<boolean> {
+  if (!sql) return false;
+  try {
+    await ensureSchema();
+    const rows = (await sql`
+      update subscriber set status = ${status}, updated_at = now()
+      where stripe_customer_id = ${customerId} returning email
+    `) as Array<{ email: string }>;
+    return rows.length > 0;
+  } catch {
+    return false;
+  }
+}
+
 /** Upsert do assinante (chamado pelo webhook do Stripe). */
 export async function upsertSubscriber(p: {
   email: string;
