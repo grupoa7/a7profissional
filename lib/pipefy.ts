@@ -17,7 +17,7 @@ export async function pipefyQuery<T>(
   variables: Record<string, unknown> = {},
   tries = 4,
 ): Promise<T> {
-  const token = process.env.PIPEFY_TOKEN;
+  const token = process.env.PIPEFY_TOKEN?.trim();
   if (!token) {
     throw new Error(
       "PIPEFY_TOKEN ausente. Configure nas variáveis de ambiente (Vercel).",
