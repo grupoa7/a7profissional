@@ -14,7 +14,7 @@ export function Header() {
           <span className="a7-desc" style={{ marginLeft: 3, paddingLeft: 13, borderLeft: "1px solid #E2E1DC", fontSize: 13, fontWeight: 500, color: "#8C8884", letterSpacing: "-.1px", whiteSpace: "nowrap" }}>Banco de Talentos</span>
         </div>
         <nav style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 22 }}>
-          <a href="#" style={{ fontSize: 14, fontWeight: 600, color: "#231F20" }}>Entrar</a>
+          <a href="/entrar" style={{ fontSize: 14, fontWeight: 600, color: "#231F20" }}>Entrar</a>
           <SubscribeButton variant="header" />
         </nav>
       </div>
