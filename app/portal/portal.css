@@ -93,6 +93,8 @@
   .selo{margin-left:auto;flex:0 0 auto;background:var(--ink);color:#fff;font-weight:800;font-size:13px;
     padding:6px 11px;border-radius:9px;letter-spacing:.4px;text-align:center;line-height:1}
   .selo.AA{background:#46474b}.selo.A{background:var(--soft);color:var(--ink);border:1px solid #dcdcd4}
+  .selo.B{background:#fff;color:var(--gray);border:1px dashed #cfcfc7}
+  .selo.NOVATA{background:#fbf6ea;color:var(--gold);border:1px dashed #e3d2a6}
   .selo small{display:block;font-size:8px;font-weight:700;opacity:.65;letter-spacing:.4px;margin-top:2px}
   .live{display:flex;align-items:center;gap:7px;font-size:12px;font-weight:600;color:var(--ok)}
   .live .d{width:7px;height:7px;border-radius:50%;background:var(--ok);display:block;animation:a7pulse 2.2s infinite}
