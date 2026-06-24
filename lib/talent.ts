@@ -19,8 +19,10 @@ const S = {
   funcao: "funcao", // ainda não existe no banco — lido como opcional (ver nota abaixo)
 } as const;
 
-// Selos exibíveis (classificação positiva). B/C/NOVATA nunca aparecem.
-const SELOS_EXIBIVEIS = new Set(["A", "AA", "AAA"]);
+// Selos exibíveis (v1.3 — 24/06/2026): corte de exibição baixou de 50 (só A+) para 40.
+// Agora B e NOVATA também aparecem (B = histórico inicial; NOVATA = aposta de formação, CTPS vazia).
+// Só C continua nunca aparecendo, sem marca nem aviso.
+const SELOS_EXIBIVEIS = new Set(["A", "AA", "AAA", "B", "NOVATA"]);
 // Valor interno do banco: função ainda não classificada. NUNCA vira filtro na vitrine
 // nem aparece pra empresa — o card carrega como se a função fosse null até o Hugo conferir.
 const FUNCAO_A_CONFERIR = "A CONFERIR";
@@ -32,7 +34,7 @@ export type TalentCard = {
   id: string; // id opaco do registro (não é PII)
   nomeParcial: string; // "João S."
   funcao: string | null; // classificada por nós; null enquanto não populada
-  selo: "A" | "AA" | "AAA";
+  selo: "A" | "AA" | "AAA" | "B" | "NOVATA";
   dias: string[];
   turnos: string[];
   valorSegSex: number | null;

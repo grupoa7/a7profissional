@@ -2,12 +2,15 @@
 import { useMemo, useState } from "react";
 import type { TalentCard } from "@/lib/talent";
 
-const RANK: Record<string, number> = { AAA: 3, AA: 2, A: 1 };
-const SELOTXT: Record<string, string> = { AAA: "EXCELÊNCIA", AA: "CONSOLIDADO", A: "CONFIÁVEL" };
+const RANK: Record<string, number> = { AAA: 5, AA: 4, A: 3, B: 2, NOVATA: 1 };
+const SELOTXT: Record<string, string> = { AAA: "EXCELÊNCIA", AA: "CONSOLIDADO", A: "CONFIÁVEL", B: "EM EVOLUÇÃO", NOVATA: "NOVATO" };
+const SELODISP: Record<string, string> = { NOVATA: "NOVO" };
 const SELOEX: Record<string, string> = {
   AAA: "Classificação máxima do A7Pro, baseada em histórico profissional verificado.",
   AA: "Classificação alta do A7Pro, baseada em histórico profissional verificado.",
   A: "Classificação positiva do A7Pro, baseada em histórico profissional verificado.",
+  B: "Histórico profissional inicial verificado pelo A7Pro. Profissional em evolução — menos tempo de casa comprovado, sem demérito.",
+  NOVATA: "Sem histórico formal em carteira. Aposta de formação do A7Pro, baseada no perfil declarado e na verificação de identidade. Primeira oportunidade.",
 };
 const DOW = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
 const FDS = new Set(["Sáb", "Dom"]);
@@ -175,7 +178,7 @@ export function Vitrine({ cards, funcoes }: { cards: TalentCard[]; funcoes: stri
                       <div className="pname">{p.nomeParcial}</div>
                       <div className="pfunc">{p.funcao ?? func}</div>
                     </div>
-                    <div className={`selo ${p.selo}`}>{p.selo}<small>{SELOTXT[p.selo]}</small></div>
+                    <div className={`selo ${p.selo}`}>{SELODISP[p.selo] ?? p.selo}<small>{SELOTXT[p.selo]}</small></div>
                   </div>
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
                     <div className="chips">
@@ -204,7 +207,7 @@ export function Vitrine({ cards, funcoes }: { cards: TalentCard[]; funcoes: stri
 
         <div className="selodisc">
           <span className="ic">i</span>
-          <div>O selo (A, AA ou AAA) e o histórico são <b>informação de apoio baseada em histórico verificado</b>. Não são garantia de desempenho, recomendação nem vínculo. A relação de cada trabalho é direta entre empresa e profissional.</div>
+          <div>O selo (A, AA, AAA, B ou novato) e o histórico são <b>informação de apoio baseada em dados verificados</b>. O selo reflete tempo de histórico comprovado, não desempenho — selos iniciais (B) e novatos não são demérito. Não são garantia de desempenho, recomendação nem vínculo. A relação de cada trabalho é direta entre empresa e profissional.</div>
         </div>
       </section>
 
@@ -215,8 +218,8 @@ export function Vitrine({ cards, funcoes }: { cards: TalentCard[]; funcoes: stri
             <h2>{aberto.nomeParcial}</h2>
             <div className="sid">{aberto.funcao ?? func} · {aberto.id}</div>
             <div className="selorow">
-              <div className={`selo ${aberto.selo}`}>{aberto.selo}<small>{SELOTXT[aberto.selo]}</small></div>
-              <div className="ex"><b>Selo {aberto.selo}.</b> {SELOEX[aberto.selo]}</div>
+              <div className={`selo ${aberto.selo}`}>{SELODISP[aberto.selo] ?? aberto.selo}<small>{SELOTXT[aberto.selo]}</small></div>
+              <div className="ex"><b>Selo {SELODISP[aberto.selo] ?? aberto.selo}.</b> {SELOEX[aberto.selo]}</div>
             </div>
             <div className="trust">
               <div className="t"><span className="ck">✓</span>Identidade e experiência verificadas pelo A7Pro</div>
