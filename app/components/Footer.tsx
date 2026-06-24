@@ -1,7 +1,7 @@
 import { Logo } from "./Logo";
 
 const notes = [
-  <>O selo (A, AA e AAA) e o histórico exibidos constituem <span style={{ color: "#231F20", fontWeight: 600 }}>informação de apoio à decisão, baseada em dados verificados na plataforma</span>. Não representam garantia de desempenho, recomendação ou vínculo de qualquer natureza.</>,
+  <>O selo (A, AA, AAA, B e novato) e o histórico exibidos constituem <span style={{ color: "#231F20", fontWeight: 600 }}>informação de apoio à decisão, baseada em dados verificados na plataforma</span>. O selo reflete o tempo de histórico comprovado, não o desempenho; selos iniciais e novatos não constituem demérito. Não representam garantia de desempenho, recomendação ou vínculo de qualquer natureza.</>,
   <>A A7Pro disponibiliza acesso a um banco de profissionais e <span style={{ color: "#231F20", fontWeight: 600 }}>não presta serviço de intermediação ou agenciamento de mão de obra</span>. A contratação, a negociação e o pagamento ocorrem direta e exclusivamente entre a empresa e o profissional. A A7Pro não contrata, não intermedeia, não efetua pagamentos e não se responsabiliza pelos atos, pela conduta ou pelo desempenho dos profissionais contatados.</>,
   <>Profissionais que não atendem ao padrão da plataforma <span style={{ color: "#231F20", fontWeight: 600 }}>não são exibidos</span>. A ausência de um profissional não constitui avaliação negativa.</>,
 ];
