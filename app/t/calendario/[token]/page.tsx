@@ -28,8 +28,7 @@ export default async function Page({ params }: { params: { token: string } }) {
           </div>
           <h1>Esse link não está mais valendo 😕</h1>
           <p>
-            Pode ser que ele tenha expirado. Chama a gente que a gente te manda um
-            novinho — leva um minuto.
+            Pode ser que tenha expirado. Chama a gente que mandamos um novo.
           </p>
         </div>
       </main>
