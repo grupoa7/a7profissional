@@ -1,7 +1,8 @@
 "use client";
 // Componente caloroso do perfil-calendário (lado trabalhador). Faz UMA coisa:
-// disponibilidade (dias + turnos) + valor autodeclarado, com renovação de 1 toque.
-// Não navega vagas, não tem feed, não tem reputação (DESIGN-BRIEF §3c).
+// disponibilidade (dias da semana + janela de horário + feriado) + valor
+// autodeclarado, com renovação de 1 toque. Não navega vagas, não tem feed, nem
+// reputação (DESIGN-BRIEF §3c).
 import { useMemo, useState } from "react";
 
 const DIAS: Array<{ v: string; curto: string }> = [
@@ -12,20 +13,15 @@ const DIAS: Array<{ v: string; curto: string }> = [
   { v: "Sexta", curto: "Sex" },
   { v: "Sábado", curto: "Sáb" },
   { v: "Domingo", curto: "Dom" },
-  { v: "Feriados", curto: "Feriados" },
-];
-const TURNOS: Array<{ v: string; sub: string }> = [
-  { v: "Manhã", sub: "início do dia" },
-  { v: "Tarde", sub: "depois do almoço" },
-  { v: "Noite", sub: "fim do dia" },
-  { v: "Madrugada", sub: "virada" },
 ];
 
 type View = {
   card: string;
   nome: string | null;
   dias: string[];
-  turnos: string[];
+  horaInicio: string | null;
+  horaFim: string | null;
+  feriados: boolean;
   valorSegSex: number | null;
   valorFds: number | null;
   atualizadoEm: string | null;
@@ -48,32 +44,39 @@ function quando(iso: string | null): string {
   if (Number.isNaN(d.getTime())) return "ainda não salvo";
   return d.toLocaleDateString("pt-BR", { day: "2-digit", month: "long", year: "numeric" });
 }
+function viraNoite(ini: string, fim: string): boolean {
+  if (!ini || !fim) return false;
+  return fim <= ini; // "HH:MM" comparável como string
+}
 
 export default function Calendario({ token, initial }: { token: string; initial: View }) {
   const [dias, setDias] = useState<Set<string>>(new Set(initial.dias));
-  const [turnos, setTurnos] = useState<Set<string>>(new Set(initial.turnos));
+  const [feriados, setFeriados] = useState<boolean>(initial.feriados);
+  const [ini, setIni] = useState<string>(initial.horaInicio || "");
+  const [fim, setFim] = useState<string>(initial.horaFim || "");
   const [segSex, setSegSex] = useState<string>(moneyToInput(initial.valorSegSex));
   const [fds, setFds] = useState<string>(moneyToInput(initial.valorFds));
 
   const [salvando, setSalvando] = useState(false);
-  const [salvo, setSalvo] = useState<string | null>(null); // ISO do último save nesta sessão
+  const [salvo, setSalvo] = useState<string | null>(null);
   const [erro, setErro] = useState<string | null>(null);
 
   const saudacao = initial.nome ? `Oi, ${initial.nome}! 👋` : "Oi! 👋";
-
-  // mostra o aviso de esmaecido só enquanto ele não salvou nesta sessão
   const mostrarEsmaecido = initial.esmaecido && !salvo;
 
-  const toggle = (set: Set<string>, setter: (s: Set<string>) => void, v: string) => {
-    const n = new Set(set);
-    if (n.has(v)) n.delete(v);
-    else n.add(v);
-    setter(n);
+  const dirty = () => {
     setSalvo(null);
     setErro(null);
   };
+  const toggleDia = (v: string) => {
+    const n = new Set(dias);
+    n.has(v) ? n.delete(v) : n.add(v);
+    setDias(n);
+    dirty();
+  };
 
-  const vazio = useMemo(() => dias.size === 0 || turnos.size === 0, [dias, turnos]);
+  const semDia = useMemo(() => dias.size === 0 && !feriados, [dias, feriados]);
+  const semHora = useMemo(() => !ini || !fim, [ini, fim]);
 
   async function salvar() {
     setSalvando(true);
@@ -85,7 +88,9 @@ export default function Calendario({ token, initial }: { token: string; initial:
         body: JSON.stringify({
           t: token,
           dias: Array.from(dias),
-          turnos: Array.from(turnos),
+          horaInicio: ini || null,
+          horaFim: fim || null,
+          feriados,
           valorSegSex: inputToMoney(segSex),
           valorFds: inputToMoney(fds),
         }),
@@ -128,30 +133,61 @@ export default function Calendario({ token, initial }: { token: string; initial:
               type="button"
               className={"cal-chip" + (dias.has(d.v) ? " on" : "")}
               aria-pressed={dias.has(d.v)}
-              onClick={() => toggle(dias, setDias, d.v)}
+              onClick={() => toggleDia(d.v)}
             >
               {d.curto}
             </button>
           ))}
         </div>
+
+        <button
+          type="button"
+          className={"cal-feriado" + (feriados ? " on" : "")}
+          aria-pressed={feriados}
+          onClick={() => {
+            setFeriados(!feriados);
+            dirty();
+          }}
+        >
+          <span className="cal-feriado-check">{feriados ? "✓" : ""}</span>
+          <span className="cal-feriado-txt">
+            <strong>Topo ser chamado em feriados também</strong>
+            <small>Feriado costuma pagar diferente — marque só se topar mesmo.</small>
+          </span>
+        </button>
       </section>
 
       <section className="cal-sec">
-        <h2>E em quais turnos?</h2>
-        <div className="cal-turnos">
-          {TURNOS.map((t) => (
-            <button
-              key={t.v}
-              type="button"
-              className={"cal-turno" + (turnos.has(t.v) ? " on" : "")}
-              aria-pressed={turnos.has(t.v)}
-              onClick={() => toggle(turnos, setTurnos, t.v)}
-            >
-              <span className="cal-turno-v">{t.v}</span>
-              <span className="cal-turno-sub">{t.sub}</span>
-            </button>
-          ))}
+        <h2>Em qual horário você topa?</h2>
+        <p className="cal-hint">Marque a faixa que você está disposto a trabalhar.</p>
+        <div className="cal-horas">
+          <label className="cal-hora">
+            <span>Começo</span>
+            <input
+              type="time"
+              value={ini}
+              onChange={(e) => {
+                setIni(e.target.value);
+                dirty();
+              }}
+            />
+          </label>
+          <span className="cal-horas-sep">até</span>
+          <label className="cal-hora">
+            <span>Fim</span>
+            <input
+              type="time"
+              value={fim}
+              onChange={(e) => {
+                setFim(e.target.value);
+                dirty();
+              }}
+            />
+          </label>
         </div>
+        {ini && fim && viraNoite(ini, fim) && (
+          <p className="cal-soft">🌙 Beleza — esse horário vira a noite (termina no dia seguinte).</p>
+        )}
       </section>
 
       <section className="cal-sec">
@@ -168,7 +204,7 @@ export default function Calendario({ token, initial }: { token: string; initial:
                 value={segSex}
                 onChange={(e) => {
                   setSegSex(e.target.value);
-                  setSalvo(null);
+                  dirty();
                 }}
               />
             </div>
@@ -183,7 +219,7 @@ export default function Calendario({ token, initial }: { token: string; initial:
                 value={fds}
                 onChange={(e) => {
                   setFds(e.target.value);
-                  setSalvo(null);
+                  dirty();
                 }}
               />
             </div>
@@ -191,9 +227,10 @@ export default function Calendario({ token, initial }: { token: string; initial:
         </div>
       </section>
 
-      {vazio && !salvo && (
+      {(semDia || semHora) && !salvo && (
         <p className="cal-soft">
-          Dica: marque pelo menos um dia e um turno pra continuar recebendo convites. 🙂
+          Dica: marque pelo menos um dia (ou feriados) e um horário pra continuar
+          recebendo convites. 🙂
         </p>
       )}
 
