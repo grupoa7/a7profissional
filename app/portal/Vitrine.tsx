@@ -1,98 +1,46 @@
 "use client";
-import { useMemo, useState } from "react";
-import type { TalentCard } from "@/lib/talent";
+// S3: a Vitrine virou o FORM DE CONVOCAÇÃO. Coleta função/data/início/valor/N e
+// chama a server action `convocar`, que cria o pedido real e monta o pool (match via
+// Neon). O resultado (pool com o porquê de cada apto) vive em /portal/pedidos — fonte
+// única e autoritativa. O preview client-side antigo (que casava pelo Pipefy e tinha
+// "Tenho interesse" falso) saiu: divergia da fonte do match e induzia ao erro.
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { convocar } from "./actions";
 
-const RANK: Record<string, number> = { AAA: 5, AA: 4, A: 3, B: 2, NOVATA: 1 };
-const SELOTXT: Record<string, string> = { AAA: "EXCELÊNCIA", AA: "CONSOLIDADO", A: "CONFIÁVEL", B: "EM EVOLUÇÃO", NOVATA: "NOVATO" };
-const SELODISP: Record<string, string> = { NOVATA: "NOVO" };
-const SELOEX: Record<string, string> = {
-  AAA: "Classificação máxima do A7Pro, baseada em histórico profissional verificado.",
-  AA: "Classificação alta do A7Pro, baseada em histórico profissional verificado.",
-  A: "Classificação positiva do A7Pro, baseada em histórico profissional verificado.",
-  B: "Histórico profissional inicial verificado pelo A7Pro. Profissional em evolução — menos tempo de casa comprovado, sem demérito.",
-  NOVATA: "Sem histórico formal em carteira. Aposta de formação do A7Pro, baseada no perfil declarado e na verificação de identidade. Primeira oportunidade.",
-};
-const DOW = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
-const FDS = new Set(["Sáb", "Dom"]);
-const VIZ: Record<string, string[]> = { "Manhã": ["Tarde"], "Tarde": ["Manhã", "Noite"], "Noite": ["Tarde"] };
 const FUNC_FALLBACK = ["Garçom", "Auxiliar de cozinha", "Bartender", "Cozinheiro", "Recepcionista", "Auxiliar de limpeza"];
 
-function turnoDe(hhmm: string) {
-  const h = +hhmm.split(":")[0];
-  return h >= 5 && h < 12 ? "Manhã" : h >= 12 && h < 18 ? "Tarde" : "Noite";
-}
 function fimDe(hhmm: string) {
   const [h, m] = hhmm.split(":").map(Number);
   const t = (h * 60 + m + 9 * 60) % (24 * 60);
   return `${String(Math.floor(t / 60)).padStart(2, "0")}:${String(t % 60).padStart(2, "0")}`;
 }
-function diaSemana(d: string) {
-  const [y, mo, da] = d.split("-").map(Number);
-  return DOW[new Date(y, mo - 1, da).getDay()];
-}
-function dataFmt(d: string) {
-  const [, mo, da] = d.split("-").map(Number);
-  return `${diaSemana(d)}, ${String(da).padStart(2, "0")}/${String(mo).padStart(2, "0")}`;
-}
-function diasDesde(iso: string | null) {
-  if (!iso) return 99;
-  const t = Date.parse(iso);
-  if (Number.isNaN(t)) return 99;
-  return Math.max(0, Math.floor((Date.now() - t) / 86_400_000));
-}
-function updTxt(n: number) {
-  return n === 0 ? "hoje" : n === 1 ? "há 1 dia" : `há ${n} dias`;
-}
-function iniciais(nome: string) {
-  return nome.replace(/[^A-Za-zÀ-ÿ ]/g, "").split(" ").map((s) => s[0]).join("").slice(0, 2).toUpperCase();
-}
 
-type Estado = Record<string, "confirming" | "done">;
-
-export function Vitrine({ cards, funcoes }: { cards: TalentCard[]; funcoes: string[] }) {
+export function Vitrine({ funcoes }: { funcoes: string[] }) {
   const funcOpts = funcoes.length ? funcoes : FUNC_FALLBACK;
   const [func, setFunc] = useState("");
   const [data, setData] = useState("");
   const [hora, setHora] = useState("");
   const [val, setVal] = useState("");
-  const [searched, setSearched] = useState(false);
-  const [estado, setEstado] = useState<Estado>({});
-  const [openId, setOpenId] = useState<string | null>(null);
+  const [n, setN] = useState("");
+  const [erro, setErro] = useState("");
+  const [pending, setPending] = useState(false);
+  const router = useRouter();
 
-  const ready = !!(func && data && hora && val);
+  const ready = !!(func && data && hora && val && Number(n) >= 1);
   const fim = hora ? fimDe(hora) : "";
 
-  const { list, widened, vizLabel, dia, turno, wknd, budget } = useMemo(() => {
-    if (!searched || !ready) {
-      return { list: [] as TalentCard[], widened: false, vizLabel: "", dia: "", turno: "", wknd: false, budget: 0 };
+  async function onConvocar() {
+    setErro("");
+    setPending(true);
+    try {
+      const r = await convocar({ funcao: func, data, inicio: hora, valor: Number(val), vagas: Math.floor(Number(n)) });
+      if (r.ok) router.push(`/portal/pedidos?novo=${r.pedidoId}`);
+      else { setErro(r.erro); setPending(false); }
+    } catch {
+      setErro("Falha de rede. Tente de novo."); setPending(false);
     }
-    const b = +val;
-    const d = diaSemana(data);
-    const tn = turnoDe(hora);
-    const wk = FDS.has(d);
-    const rate = (p: TalentCard) => (wk ? p.valorFds : p.valorSegSex);
-    const matchBase = (p: TalentCard) => p.funcao === func && p.dias.includes(d) && rate(p) != null && (rate(p) as number) <= b;
-    let l = cards.filter((p) => matchBase(p) && p.turnos.includes(tn));
-    let wdn = false;
-    let viz: string[] = [];
-    if (l.length < 3) {
-      const extra = cards.filter((p) => matchBase(p) && !l.includes(p) && (VIZ[tn] || []).some((t) => p.turnos.includes(t)));
-      if (extra.length) {
-        wdn = true;
-        viz = VIZ[tn] || [];
-        l = l.concat(extra);
-      }
-    }
-    l = [...l].sort((a, c) => RANK[c.selo] - RANK[a.selo] || ((wk ? a.valorFds : a.valorSegSex) ?? 9e9) - ((wk ? c.valorFds : c.valorSegSex) ?? 9e9) || diasDesde(a.atualizadoEm) - diasDesde(c.atualizadoEm));
-    return { list: l, widened: wdn, vizLabel: viz.join(" e "), dia: d, turno: tn, wknd: wk, budget: b };
-  }, [searched, ready, cards, func, data, hora, val]);
-
-  function marcar(id: string) {
-    setEstado((s) => ({ ...s, [id]: "confirming" }));
-    setTimeout(() => setEstado((s) => ({ ...s, [id]: "done" })), 1100);
   }
-
-  const aberto = openId ? cards.find((c) => c.id === openId) ?? null : null;
 
   return (
     <>
@@ -131,10 +79,20 @@ export function Vitrine({ cards, funcoes }: { cards: TalentCard[]; funcoes: stri
             </select>
             <span className="hint">Valor único, transporte de ida e volta já incluso.</span>
           </div>
+          <div className="fb">
+            <span className="k">Quantas pessoas</span>
+            <input type="number" className="ctrl" min={1} max={50} step={1} value={n} placeholder="ex.: 2" onChange={(e) => setN(e.target.value)} />
+            <span className="hint">Buscamos pelo menos o dobro disso pra você escolher.</span>
+          </div>
         </div>
+
         <div className="go">
-          <button className="gobtn" disabled={!ready} onClick={() => setSearched(true)}>Ver profissionais disponíveis</button>
+          <button className="gobtn" disabled={!ready || pending} onClick={onConvocar}>
+            {pending ? "Montando o pool…" : "Convocar e montar o pool"}
+          </button>
         </div>
+        {erro && <div className="widen on" style={{ marginTop: 10 }}><span>!</span><div>{erro}</div></div>}
+
         <div className="lockval">
           <span className="ic">🔒</span>
           <div><b>O valor é fechado no aceite.</b> O convite vai com exatamente o valor e o horário que você definir aqui, e o profissional só aceita já sabendo quanto vai receber e em que turno. Por isso não há renegociação depois. Tentar mexer no valor na hora é a maior causa de desistência, e a plataforma protege os dois lados disso.</div>
@@ -142,113 +100,11 @@ export function Vitrine({ cards, funcoes }: { cards: TalentCard[]; funcoes: stri
       </section>
 
       <section className="res">
-        {searched && ready && list.length > 0 && (
-          <div className="resHd">
-            <span className="n">{list.length}</span>
-            <span className="t">para <b>{func}</b> · {dataFmt(data)} · {hora} às {fim} · até <b>R$ {budget}</b> com transporte</span>
-          </div>
-        )}
-        {widened && (
-          <div className="widen on"><span>↔</span><div><b>Poucos no horário exato.</b> Incluí o turno da {vizLabel} pra você não ficar sem opção, sempre dentro do seu orçamento.</div></div>
-        )}
-
-        {!(searched && ready) && (
-          <div className="placeholder">
-            <div className="big">Defina os campos acima pra ver quem está disponível</div>
-            Mostramos só profissionais com classificação positiva, disponíveis na sua data e horário, que já aceitam o valor que você paga.
-          </div>
-        )}
-        {searched && ready && list.length === 0 && (
-          <div className="placeholder">
-            <div className="big">Ninguém disponível dentro do seu orçamento pra essa data e horário.</div>
-            Tente outro horário ou ajuste o valor. Não mostramos quem cobra acima do que você paga, isso evita pechincha e protege o comparecimento.
-          </div>
-        )}
-
-        {searched && ready && list.length > 0 && (
-          <div className="grid">
-            {list.map((p) => {
-              const st = estado[p.id];
-              const dias = [dia, ...p.dias.filter((d) => d !== dia)].slice(0, 4);
-              return (
-                <div className="pcard" key={p.id} onClick={() => setOpenId(p.id)}>
-                  <div className="ptop">
-                    <div className="av">{iniciais(p.nomeParcial)}</div>
-                    <div style={{ flex: 1 }}>
-                      <div className="pname">{p.nomeParcial}</div>
-                      <div className="pfunc">{p.funcao ?? func}</div>
-                    </div>
-                    <div className={`selo ${p.selo}`}>{SELODISP[p.selo] ?? p.selo}<small>{SELOTXT[p.selo]}</small></div>
-                  </div>
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
-                    <div className="chips">
-                      {dias.map((d) => <span className={`chip${d === dia ? " hit" : ""}`} key={d}>{d}</span>)}
-                      <span className="chip t">{turno}</span>
-                    </div>
-                    <span className="live"><span className="d" />{updTxt(diasDesde(p.atualizadoEm))}</span>
-                  </div>
-                  <div className="valbox">
-                    <div className={`c ${!wknd ? "hot" : ""}`}><div className="k">Diária Seg–Sex</div><div className="v">R$ {p.valorSegSex ?? "—"}<small> /dia</small></div></div>
-                    <div className={`c ${wknd ? "hot" : ""}`}><div className="k">Sáb/Dom/Feriado</div><div className="v">R$ {p.valorFds ?? "—"}<small> /dia</small></div></div>
-                  </div>
-                  <div className="first">{p.trabalhosConcluidos > 0 ? `${p.trabalhosConcluidos} trabalhos concluídos` : "Primeira oportunidade via A7Pro"}</div>
-                  {st === "confirming" ? (
-                    <div className="confirming"><span className="spin" />Avisando o profissional e confirmando a disponibilidade…</div>
-                  ) : st === "done" ? (
-                    <div className="done"><div className="t">✓ Interesse registrado</div>Estamos confirmando a disponibilidade dele e conectamos vocês em até <b>24h úteis</b>. Confirmação no seu e-mail.</div>
-                  ) : (
-                    <div className="foot"><span className="lock">🔒 contato após o aceite</span><button className="btn" onClick={(e) => { e.stopPropagation(); marcar(p.id); }}>Tenho interesse</button></div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        )}
-
-        <div className="selodisc">
-          <span className="ic">i</span>
-          <div>O selo (A, AA, AAA, B ou novato) e o histórico são <b>informação de apoio baseada em dados verificados</b>. O selo reflete tempo de histórico comprovado, não desempenho — selos iniciais (B) e novatos não são demérito. Não são garantia de desempenho, recomendação nem vínculo. A relação de cada trabalho é direta entre empresa e profissional.</div>
+        <div className="placeholder">
+          <div className="big">Defina a vaga e clique em <b>Convocar</b></div>
+          Montamos o pool com quem está disponível na sua data e horário, que já aceita o valor que você paga. Você acompanha o pool em <a href="/portal/pedidos" style={{ color: "var(--gold)", fontWeight: 700 }}>Meus pedidos</a>.
         </div>
       </section>
-
-      {aberto && (
-        <div className="ov on" onClick={(e) => { if ((e.target as HTMLElement).classList.contains("ov")) setOpenId(null); }}>
-          <div className="sheet">
-            <button className="x" onClick={() => setOpenId(null)}>×</button>
-            <h2>{aberto.nomeParcial}</h2>
-            <div className="sid">{aberto.funcao ?? func} · {aberto.id}</div>
-            <div className="selorow">
-              <div className={`selo ${aberto.selo}`}>{SELODISP[aberto.selo] ?? aberto.selo}<small>{SELOTXT[aberto.selo]}</small></div>
-              <div className="ex"><b>Selo {SELODISP[aberto.selo] ?? aberto.selo}.</b> {SELOEX[aberto.selo]}</div>
-            </div>
-            <div className="trust">
-              <div className="t"><span className="ck">✓</span>Identidade e experiência verificadas pelo A7Pro</div>
-              <div className="t"><span className="ck">✓</span>Disponibilidade reconfirmada {updTxt(diasDesde(aberto.atualizadoEm))}</div>
-            </div>
-            <div style={{ marginTop: 14 }}><div className="lab">Dias disponíveis</div><div className="chips">{aberto.dias.map((d) => <span className="chip" key={d}>{d}</span>)}</div></div>
-            <div style={{ marginTop: 12 }}><div className="lab">Turnos disponíveis</div><div className="chips">{aberto.turnos.map((t) => <span className="chip t" key={t}>{t}</span>)}</div></div>
-            <div className="row2">
-              <div className="box" style={!wknd ? { borderColor: "#e3d2a6" } : undefined}><div className="k">Diária Seg–Sex</div><div className="v">R$ {aberto.valorSegSex ?? "—"}</div></div>
-              <div className="box" style={wknd ? { borderColor: "#e3d2a6" } : undefined}><div className="k">Sáb / Dom / Feriado</div><div className="v">R$ {aberto.valorFds ?? "—"}</div></div>
-            </div>
-            <div style={{ fontSize: 11.5, color: "var(--ink)", background: "#fbf6ea", border: "1px solid #ecdcb3", borderRadius: 10, padding: "10px 12px" }}>
-              <b style={{ color: "var(--gold)" }}>Primeira oportunidade via A7Pro.</b> Ainda sem trabalhos pela plataforma. Já passou pela verificação do A7Pro e está pronto para estrear.
-            </div>
-            {searched && ready && (
-              <div className="valnote"><b>Ao convidar, a proposta vai fechada:</b> R$ {budget} pela diária (transporte incluso), {hora} às {fim}. O profissional aceita já sabendo disso, e o valor não se renegocia depois.</div>
-            )}
-            <div className="lockbox">🔒 <b>Nome completo, telefone, WhatsApp e e-mail</b> são liberados somente após o profissional aceitar a sua oportunidade.</div>
-            {estado[aberto.id] === "confirming" ? (
-              <div className="confirming" style={{ marginTop: 14 }}><span className="spin" />Avisando o profissional e confirmando a disponibilidade…</div>
-            ) : estado[aberto.id] === "done" ? (
-              <div className="done" style={{ marginTop: 14 }}><div className="t">✓ Interesse registrado</div>Estamos confirmando a disponibilidade dele e conectamos vocês em até <b>24h úteis</b>. Confirmação no seu e-mail.</div>
-            ) : (
-              <div className="foot" style={{ marginTop: 14 }}><button className="btn" style={{ marginLeft: 0, width: "100%" }} onClick={() => marcar(aberto.id)}>Tenho interesse neste profissional</button></div>
-            )}
-            <div className="disc">O selo e o histórico são informação de apoio baseada em histórico verificado. Não são garantia de desempenho, recomendação nem vínculo. A relação de cada trabalho é direta entre empresa e profissional.</div>
-          </div>
-        </div>
-      )}
     </>
   );
 }
