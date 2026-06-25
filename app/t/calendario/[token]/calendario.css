@@ -110,18 +110,14 @@
   color: var(--white);
 }
 
-/* turnos — cartões maiores com subtítulo */
-.cal-turnos {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
-}
-.cal-turno {
+/* feriado — interruptor próprio (lógica diferente dos dias da semana) */
+.cal-feriado {
   display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 2px;
-  padding: 14px 14px;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  margin-top: 14px;
+  padding: 13px 14px;
   border-radius: 14px;
   border: 1.5px solid var(--line);
   background: var(--white);
@@ -130,17 +126,46 @@
   transition: all 0.12s ease;
   -webkit-tap-highlight-color: transparent;
 }
-.cal-turno:active { transform: scale(0.98); }
-.cal-turno.on { border-color: var(--ink); background: #faf9f6; }
-.cal-turno-v { font-size: 15.5px; font-weight: 700; color: var(--ink); }
-.cal-turno.on .cal-turno-v { color: var(--ink); }
-.cal-turno-sub { font-size: 12.5px; color: var(--faint); }
-.cal-turno.on .cal-turno-v::before {
-  content: "● ";
-  color: var(--ok);
-  font-size: 11px;
-  vertical-align: middle;
+.cal-feriado:active { transform: scale(0.99); }
+.cal-feriado.on { border-color: var(--ink); background: #faf9f6; }
+.cal-feriado-check {
+  flex: 0 0 24px;
+  height: 24px;
+  border-radius: 7px;
+  border: 1.5px solid var(--line);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--white);
 }
+.cal-feriado.on .cal-feriado-check { background: var(--ok); border-color: var(--ok); }
+.cal-feriado-txt { display: flex; flex-direction: column; gap: 2px; }
+.cal-feriado-txt strong { font-size: 14.5px; font-weight: 700; color: var(--ink); }
+.cal-feriado-txt small { font-size: 12.5px; color: var(--faint); }
+
+/* janela de horário — começo / até / fim */
+.cal-horas {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+}
+.cal-hora { flex: 1; display: flex; flex-direction: column; gap: 6px; }
+.cal-hora > span { font-size: 14px; font-weight: 600; color: var(--ink); }
+.cal-hora input[type="time"] {
+  border: 1.5px solid var(--line);
+  border-radius: 12px;
+  padding: 13px 12px;
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--ink);
+  background: var(--white);
+  outline: 0;
+  width: 100%;
+}
+.cal-hora input[type="time"]:focus { border-color: var(--ink); }
+.cal-horas-sep { padding-bottom: 14px; font-size: 14px; color: var(--faint); font-weight: 600; }
 
 /* valores */
 .cal-vals { display: flex; flex-direction: column; gap: 12px; }
