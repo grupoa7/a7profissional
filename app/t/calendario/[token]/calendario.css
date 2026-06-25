@@ -205,8 +205,35 @@
   background: #f7f7f4;
   border-radius: 10px;
   padding: 10px 12px;
-  margin: 6px 0 0;
+  margin: 10px 0 0;
 }
+.cal-soft strong { color: var(--ink); font-weight: 700; }
+.cal-soft-warn {
+  background: #fbf6ea;
+  color: #6b5413;
+}
+.cal-soft-warn strong { color: #6b5413; }
+
+/* callout explicativo — "o óbvio precisa ser dito" */
+.cal-callout {
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: #46474b;
+  background: #f1f4f8;
+  border: 1px solid #d9e1ec;
+  border-radius: 12px;
+  padding: 12px 14px;
+  margin: 0 0 14px;
+}
+.cal-callout strong { color: var(--ink); font-weight: 700; }
+.cal-callout em { font-style: normal; font-weight: 600; color: var(--ink); }
+.cal-callout-ok {
+  background: #eef7f1;
+  border-color: #c9e6d5;
+  color: #2c5e44;
+  margin: 4px 0 14px;
+}
+.cal-callout-ok strong { color: #1f6b46; }
 .cal-erro {
   font-size: 14px;
   color: #9a2a2a;
