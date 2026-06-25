@@ -45,7 +45,9 @@ export async function POST(req: Request) {
   try {
     const view = await salvarDisponibilidade(card, {
       dias: Array.isArray(body.dias) ? body.dias : [],
-      turnos: Array.isArray(body.turnos) ? body.turnos : [],
+      horaInicio: typeof body.horaInicio === "string" ? body.horaInicio : null,
+      horaFim: typeof body.horaFim === "string" ? body.horaFim : null,
+      feriados: body.feriados === true,
       valorSegSex: typeof body.valorSegSex === "number" ? body.valorSegSex : null,
       valorFds: typeof body.valorFds === "number" ? body.valorFds : null,
     });
