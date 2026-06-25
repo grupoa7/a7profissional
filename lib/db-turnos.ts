@@ -37,6 +37,12 @@ export async function ensureTurnosSchema(): Promise<void> {
       atualizado_em timestamptz not null default now()
     )
   `;
+  // S2 (25/06): o "turno quadrado" virou JANELA DE HORÁRIO (das X às Y) e os
+  // feriados saíram dos dias da semana pra um opt-in próprio (lógica/valor diferente).
+  // `turnos` fica como legado (não escrito). Idempotente — ADD COLUMN IF NOT EXISTS.
+  await sql`alter table disponibilidade add column if not exists hora_inicio text`;
+  await sql`alter table disponibilidade add column if not exists hora_fim    text`;
+  await sql`alter table disponibilidade add column if not exists feriados    boolean not null default false`;
 
   // pedido de diária da empresa (Uber) — endereço OCULTO até a seleção (convite cego).
   await sql`
