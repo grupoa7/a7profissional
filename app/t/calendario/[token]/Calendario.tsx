@@ -127,13 +127,13 @@ export default function Calendario({ token, initial }: { token: string; initial:
 
       <h1 className="cal-hi">{saudacao}</h1>
       <p className="cal-lead">
-        Aqui você mantém sua disponibilidade em dia. É assim que as oportunidades
-        certas chegam até você — sem precisar instalar nada.
+        Mantenha sua disponibilidade em dia. É assim que as oportunidades certas
+        chegam até você.
       </p>
 
       {mostrarEsmaecido && (
         <div className="cal-banner">
-          🌱 Sua disponibilidade está um pouquinho antiga. Dá uma conferida e toca em
+          🌱 Sua disponibilidade está antiga. Confira e toque em
           <strong> salvar</strong> pra voltar a aparecer.
         </div>
       )}
@@ -166,7 +166,7 @@ export default function Calendario({ token, initial }: { token: string; initial:
           <span className="cal-feriado-check">{feriados ? "✓" : ""}</span>
           <span className="cal-feriado-txt">
             <strong>Topo ser chamado em feriados também</strong>
-            <small>Feriado costuma pagar diferente — marque só se topar mesmo.</small>
+            <small>Feriado costuma pagar diferente. Marque só se topar mesmo.</small>
           </span>
         </button>
       </section>
@@ -174,10 +174,10 @@ export default function Calendario({ token, initial }: { token: string; initial:
       <section className="cal-sec">
         <h2>Em que horário do dia você fica disponível?</h2>
         <div className="cal-callout">
-          <strong>Atenção:</strong> aqui você marca só a <em>faixa do dia</em> em que pode
-          pegar um turno — <u>não</u> que vai trabalhar esse tempo todo. Cada diária é de{" "}
-          <strong>8h de trabalho + 1h de intervalo</strong> (9h no total), encaixada dentro
-          dessa faixa.
+          Marque a <em>faixa do dia</em> em que você pode pegar um turno. Você{" "}
+          <u>não</u> trabalha esse tempo todo: cada diária é de{" "}
+          <strong>8h de trabalho + 1h de intervalo</strong> (9h no total), encaixada
+          nessa faixa.
         </div>
         <div className="cal-horas">
           <label className="cal-hora">
@@ -211,10 +211,10 @@ export default function Calendario({ token, initial }: { token: string; initial:
           return (
             <p className={curta ? "cal-soft cal-soft-warn" : "cal-soft"}>
               {viraNoite(ini, fim) ? "🌙 Vira a noite (termina no dia seguinte). " : ""}
-              Sua janela é de <strong>{fmtDur(min)}</strong>
+              Sua janela é de <strong>{fmtDur(min)}</strong>.{" "}
               {curta
-                ? " — é menos que as 9h de uma diária, pode não dar pra encaixar um turno inteiro."
-                : " — dá pra encaixar uma diária de 9h dentro dela."}
+                ? "É menos que as 9h da diária, pode não encaixar."
+                : "Dá pra encaixar a diária de 9h."}
             </p>
           );
         })()}
@@ -224,8 +224,8 @@ export default function Calendario({ token, initial }: { token: string; initial:
         <h2>Quanto você cobra por diária?</h2>
         <p className="cal-hint">Você que define. A A7Pro nunca sugere valor.</p>
         <div className="cal-callout cal-callout-ok">
-          🚕 O valor que você colocar <strong>já inclui o seu transporte</strong> (ida e
-          volta). Considere isso na hora de definir.
+          🚕 O valor que você colocar <strong>já inclui seu transporte</strong> (ida e
+          volta). Considere isso ao definir.
         </div>
         <div className="cal-vals">
           <label className="cal-val">
@@ -263,8 +263,7 @@ export default function Calendario({ token, initial }: { token: string; initial:
 
       {(semDia || semHora) && !salvo && (
         <p className="cal-soft">
-          Dica: marque pelo menos um dia (ou feriados) e um horário pra continuar
-          recebendo convites. 🙂
+          Marque pelo menos um dia (ou feriados) e um horário pra receber convites. 🙂
         </p>
       )}
 
@@ -284,20 +283,20 @@ export default function Calendario({ token, initial }: { token: string; initial:
             {salvando ? "Salvando…" : "Salvar minha disponibilidade"}
           </button>
           <p className="cal-renew">
-            Sem mudanças? Salvar mesmo assim renova seu calendário e te mantém no radar.
+            Sem mudanças? Salvar mesmo assim renova seu calendário.
           </p>
         </>
       )}
 
       <footer className="cal-foot">
         <p>
-          A A7Pro organiza oportunidades — quem decide se topa é sempre você. Seus
-          dados são seus, e você pode ajustar isto quando quiser.
+          Quem decide se topa é sempre você. Seus dados são seus e você ajusta
+          quando quiser.
         </p>
         <p className="cal-foot-when">
           {initial.atualizadoEm
             ? `Última atualização: ${quando(initial.atualizadoEm)}`
-            : "Primeira vez por aqui — é só conferir e salvar."}
+            : "Primeira vez por aqui? Confira e salve."}
         </p>
       </footer>
     </div>
