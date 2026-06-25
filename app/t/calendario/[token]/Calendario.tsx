@@ -48,6 +48,20 @@ function viraNoite(ini: string, fim: string): boolean {
   if (!ini || !fim) return false;
   return fim <= ini; // "HH:MM" comparável como string
 }
+// minutos da janela de disponibilidade (trata virada da noite).
+function janelaMin(ini: string, fim: string): number | null {
+  if (!ini || !fim) return null;
+  const [h1, m1] = ini.split(":").map(Number);
+  const [h2, m2] = fim.split(":").map(Number);
+  let d = h2 * 60 + m2 - (h1 * 60 + m1);
+  if (d <= 0) d += 24 * 60; // virou a noite
+  return d;
+}
+function fmtDur(min: number): string {
+  const h = Math.floor(min / 60), m = min % 60;
+  return m ? `${h}h${String(m).padStart(2, "0")}` : `${h}h`;
+}
+const TURNO_MIN = 9 * 60; // diária = 8h trabalho + 1h intervalo
 
 export default function Calendario({ token, initial }: { token: string; initial: View }) {
   const [dias, setDias] = useState<Set<string>>(new Set(initial.dias));
@@ -158,11 +172,16 @@ export default function Calendario({ token, initial }: { token: string; initial:
       </section>
 
       <section className="cal-sec">
-        <h2>Em qual horário você topa?</h2>
-        <p className="cal-hint">Marque a faixa que você está disposto a trabalhar.</p>
+        <h2>Em que horário do dia você fica disponível?</h2>
+        <div className="cal-callout">
+          <strong>Atenção:</strong> aqui você marca só a <em>faixa do dia</em> em que pode
+          pegar um turno — <u>não</u> que vai trabalhar esse tempo todo. Cada diária é de{" "}
+          <strong>8h de trabalho + 1h de intervalo</strong> (9h no total), encaixada dentro
+          dessa faixa.
+        </div>
         <div className="cal-horas">
           <label className="cal-hora">
-            <span>Começo</span>
+            <span>Disponível a partir de</span>
             <input
               type="time"
               value={ini}
@@ -174,7 +193,7 @@ export default function Calendario({ token, initial }: { token: string; initial:
           </label>
           <span className="cal-horas-sep">até</span>
           <label className="cal-hora">
-            <span>Fim</span>
+            <span>Disponível até</span>
             <input
               type="time"
               value={fim}
@@ -185,14 +204,29 @@ export default function Calendario({ token, initial }: { token: string; initial:
             />
           </label>
         </div>
-        {ini && fim && viraNoite(ini, fim) && (
-          <p className="cal-soft">🌙 Beleza — esse horário vira a noite (termina no dia seguinte).</p>
-        )}
+        {ini && fim && (() => {
+          const min = janelaMin(ini, fim);
+          if (min == null) return null;
+          const curta = min < TURNO_MIN;
+          return (
+            <p className={curta ? "cal-soft cal-soft-warn" : "cal-soft"}>
+              {viraNoite(ini, fim) ? "🌙 Vira a noite (termina no dia seguinte). " : ""}
+              Sua janela é de <strong>{fmtDur(min)}</strong>
+              {curta
+                ? " — é menos que as 9h de uma diária, pode não dar pra encaixar um turno inteiro."
+                : " — dá pra encaixar uma diária de 9h dentro dela."}
+            </p>
+          );
+        })()}
       </section>
 
       <section className="cal-sec">
         <h2>Quanto você cobra por diária?</h2>
         <p className="cal-hint">Você que define. A A7Pro nunca sugere valor.</p>
+        <div className="cal-callout cal-callout-ok">
+          🚕 O valor que você colocar <strong>já inclui o seu transporte</strong> (ida e
+          volta). Considere isso na hora de definir.
+        </div>
         <div className="cal-vals">
           <label className="cal-val">
             <span>Segunda a sexta</span>
