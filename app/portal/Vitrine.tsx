@@ -23,18 +23,20 @@ export function Vitrine({ funcoes }: { funcoes: string[] }) {
   const [hora, setHora] = useState("");
   const [val, setVal] = useState("");
   const [n, setN] = useState("");
+  const [bairro, setBairro] = useState("");
+  const [endereco, setEndereco] = useState("");
   const [erro, setErro] = useState("");
   const [pending, setPending] = useState(false);
   const router = useRouter();
 
-  const ready = !!(func && data && hora && val && Number(n) >= 1);
+  const ready = !!(func && data && hora && val && Number(n) >= 1 && bairro.trim());
   const fim = hora ? fimDe(hora) : "";
 
   async function onConvocar() {
     setErro("");
     setPending(true);
     try {
-      const r = await convocar({ funcao: func, data, inicio: hora, valor: Number(val), vagas: Math.floor(Number(n)) });
+      const r = await convocar({ funcao: func, data, inicio: hora, valor: Number(val), vagas: Math.floor(Number(n)), bairro: bairro.trim(), endereco: endereco.trim() });
       if (r.ok) router.push(`/portal/pedidos?novo=${r.pedidoId}`);
       else { setErro(r.erro); setPending(false); }
     } catch {
@@ -83,6 +85,16 @@ export function Vitrine({ funcoes }: { funcoes: string[] }) {
             <span className="k">Quantas pessoas</span>
             <input type="number" className="ctrl" min={1} max={50} step={1} value={n} placeholder="ex.: 2" onChange={(e) => setN(e.target.value)} />
             <span className="hint">Buscamos pelo menos o dobro disso pra você escolher.</span>
+          </div>
+          <div className="fb">
+            <span className="k">Bairro</span>
+            <input type="text" className="ctrl" value={bairro} placeholder="ex.: Jardim de Alah" onChange={(e) => setBairro(e.target.value)} />
+            <span className="hint">É o único dado de local que o convite mostra. A empresa fica oculta.</span>
+          </div>
+          <div className="fb">
+            <span className="k">Endereço completo <span style={{ color: "var(--faint)", fontWeight: 400 }}>(opcional)</span></span>
+            <input type="text" className="ctrl" value={endereco} placeholder="Rua, nº, ponto de referência" onChange={(e) => setEndereco(e.target.value)} />
+            <span className="hint">🔒 Fica guardado e só é revelado a quem você escolher.</span>
           </div>
         </div>
 

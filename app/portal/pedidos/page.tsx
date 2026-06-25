@@ -73,7 +73,7 @@ export default async function PedidosPage({ searchParams }: { searchParams: { no
                     {destaque.pool.atingiuMinimo
                       ? " Pool acima do mínimo."
                       : " Pool abaixo do mínimo — considere ampliar valor, horário ou aceitar funções relacionadas."}
-                    <br /><small style={{ color: "#7a7b7e" }}>Universo exibível avaliado: {destaque.pool.universoExibivel} · convites gravados (status=pool): {destaque.pedido.pool}</small>
+                    <br /><small style={{ color: "#7a7b7e" }}>Universo exibível avaliado: {destaque.pool.universoExibivel} · convites no pedido: {destaque.pedido.pool} · pré-convites disparados: {destaque.pedido.enviado} · com interesse: {destaque.pedido.interesse}</small>
                   </div>
                 </div>
 
@@ -129,7 +129,7 @@ export default async function PedidosPage({ searchParams }: { searchParams: { no
                     <b>#{p.id}</b> · {p.funcao ?? "—"} · {dataFmt(p.data)} {p.hora ?? ""} · até R$ {p.valor ?? "—"} · {p.vagas} vaga(s)
                   </div>
                   <div style={{ fontSize: 12.5, color: "#7a7b7e" }}>
-                    pool: <b style={{ color: "#46474b" }}>{p.pool}</b> · {p.status}
+                    pool <b style={{ color: "#46474b" }}>{p.pool}</b> · disparados <b style={{ color: "#46474b" }}>{p.enviado}</b> · interesse <b style={{ color: "var(--ok, #2f7d52)" }}>{p.interesse}</b> · {p.status}
                   </div>
                 </div>
               ))}

@@ -67,7 +67,9 @@ export type PedidoRow = {
   vagas: number;
   status: string;
   criado_em: string; // ISO
-  pool: number; // nº de convites
+  pool: number; // nº total de convites do pedido
+  enviado: number; // convites disparados (pré-convite saiu), aguardando resposta (S4)
+  interesse: number; // convites com "Tenho interesse" confirmado (S4)
 };
 
 /** Lista os pedidos de uma empresa (mais recentes primeiro) + a contagem do pool. */
@@ -79,7 +81,9 @@ export async function lerPedidos(empresa: string): Promise<PedidoRow[]> {
            to_char(p.data, 'YYYY-MM-DD') as data,
            p.hora, p.valor, p.vagas, p.status,
            to_char(p.criado_em at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"') as criado_em,
-           (select count(*)::int from convite c where c.pedido_id = p.id) as pool
+           (select count(*)::int from convite c where c.pedido_id = p.id) as pool,
+           (select count(*)::int from convite c where c.pedido_id = p.id and c.status = 'enviado') as enviado,
+           (select count(*)::int from convite c where c.pedido_id = p.id and c.status = 'interesse') as interesse
     from pedido p
     where p.empresa = ${empresa}
     order by p.id desc
@@ -96,6 +100,8 @@ export async function lerPedidos(empresa: string): Promise<PedidoRow[]> {
     status: r.status,
     criado_em: r.criado_em,
     pool: Number(r.pool),
+    enviado: Number(r.enviado),
+    interesse: Number(r.interesse),
   }));
 }
 
@@ -118,7 +124,9 @@ export async function lerPedido(pedidoId: number): Promise<PedidoRow | null> {
            to_char(p.data, 'YYYY-MM-DD') as data,
            p.hora, p.valor, p.vagas, p.status,
            to_char(p.criado_em at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"') as criado_em,
-           (select count(*)::int from convite c where c.pedido_id = p.id) as pool
+           (select count(*)::int from convite c where c.pedido_id = p.id) as pool,
+           (select count(*)::int from convite c where c.pedido_id = p.id and c.status = 'enviado') as enviado,
+           (select count(*)::int from convite c where c.pedido_id = p.id and c.status = 'interesse') as interesse
     from pedido p where p.id = ${pedidoId} limit 1
   `) as Array<any>;
   if (!rows.length) return null;
@@ -134,5 +142,7 @@ export async function lerPedido(pedidoId: number): Promise<PedidoRow | null> {
     status: r.status,
     criado_em: r.criado_em,
     pool: Number(r.pool),
+    enviado: Number(r.enviado),
+    interesse: Number(r.interesse),
   };
 }

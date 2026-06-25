@@ -115,6 +115,50 @@ export function verifyCalendarToken(
   return p;
 }
 
+// ---- Token de CONVITE (S4 · convite CEGO). Single-purpose: abre SÓ a página de
+// um convite específico. Carrega o `conviteId` (id da linha `convite` no Neon) —
+// NUNCA o card, NUNCA o telefone, NUNCA a empresa/endereço. O isolamento LGPD é total:
+// quem tem o link vê só os dados cegos daquele convite, e nada cruza com a sessão da
+// empresa nem com o link de calendário (purpose próprio). TTL curto (24h, decisão D-D —
+// começa folgado pra amostragem ampla; reduzir depois). Reusa o MESMO HMAC/SECRET.
+const CONVITE_HOURS = 24;
+type ConvitePayload = { conviteId: number; purpose: "convite"; exp: number };
+
+export function makeConviteToken(conviteId: number, hours = CONVITE_HOURS): string {
+  if (!SECRET) throw new Error("AUTH_SECRET ausente");
+  if (!conviteId) throw new Error("conviteId ausente");
+  const payload: ConvitePayload = {
+    conviteId: Number(conviteId),
+    purpose: "convite",
+    exp: Math.floor(Date.now() / 1000) + hours * 3600,
+  };
+  const body = Buffer.from(JSON.stringify(payload)).toString("base64url");
+  return `${body}.${sign(body)}`;
+}
+
+export function verifyConviteToken(
+  token: string | undefined | null,
+): ConvitePayload | null {
+  if (!token || !SECRET) return null;
+  const dot = token.indexOf(".");
+  if (dot <= 0) return null;
+  const body = token.slice(0, dot);
+  const sig = token.slice(dot + 1);
+  const expected = sign(body);
+  const a = Buffer.from(sig);
+  const b = Buffer.from(expected);
+  if (a.length !== b.length || !crypto.timingSafeEqual(a, b)) return null;
+  let p: ConvitePayload;
+  try {
+    p = JSON.parse(Buffer.from(body, "base64url").toString());
+  } catch {
+    return null;
+  }
+  if (p.purpose !== "convite" || !p.conviteId) return null;
+  if (!p.exp || p.exp * 1000 < Date.now()) return null;
+  return p;
+}
+
 // ---- Envio do magic link via Resend (REST por fetch — sem SDK, zero dep).
 export async function sendMagicLink(email: string, link: string): Promise<boolean> {
   const key = process.env.RESEND_API_KEY;
