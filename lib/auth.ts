@@ -71,6 +71,50 @@ export function getSession(): Payload | null {
   return verifyToken(c, "session");
 }
 
+// ---- Token de CALENDÁRIO do trabalhador (S2 · mecânica Spotify).
+// Single-purpose: abre SÓ o calendário do próprio diarista. Carrega o `card`
+// (id do table_record do banco ZxbYr_AS = 1:1 com o CPF), NUNCA o email.
+// É o "link permanente" do perfil: TTL longo (180d), renovado a cada save.
+// Reusa o MESMO HMAC/SECRET, mas com payload e verificação próprios — sem
+// cruzar com o cookie de sessão da empresa (purpose diferente ⇒ não trafega).
+const CALENDAR_DAYS = 180;
+type CalendarPayload = { card: string; purpose: "calendar"; exp: number };
+
+export function makeCalendarToken(card: string, days = CALENDAR_DAYS): string {
+  if (!SECRET) throw new Error("AUTH_SECRET ausente");
+  if (!card) throw new Error("card ausente");
+  const payload: CalendarPayload = {
+    card: String(card),
+    purpose: "calendar",
+    exp: Math.floor(Date.now() / 1000) + days * 86_400,
+  };
+  const body = Buffer.from(JSON.stringify(payload)).toString("base64url");
+  return `${body}.${sign(body)}`;
+}
+
+export function verifyCalendarToken(
+  token: string | undefined | null,
+): CalendarPayload | null {
+  if (!token || !SECRET) return null;
+  const dot = token.indexOf(".");
+  if (dot <= 0) return null;
+  const body = token.slice(0, dot);
+  const sig = token.slice(dot + 1);
+  const expected = sign(body);
+  const a = Buffer.from(sig);
+  const b = Buffer.from(expected);
+  if (a.length !== b.length || !crypto.timingSafeEqual(a, b)) return null;
+  let p: CalendarPayload;
+  try {
+    p = JSON.parse(Buffer.from(body, "base64url").toString());
+  } catch {
+    return null;
+  }
+  if (p.purpose !== "calendar" || !p.card) return null;
+  if (!p.exp || p.exp * 1000 < Date.now()) return null;
+  return p;
+}
+
 // ---- Envio do magic link via Resend (REST por fetch — sem SDK, zero dep).
 export async function sendMagicLink(email: string, link: string): Promise<boolean> {
   const key = process.env.RESEND_API_KEY;
