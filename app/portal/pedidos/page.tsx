@@ -5,6 +5,8 @@ import { getSession, isDogfood } from "@/lib/auth";
 import { isActiveSubscriber } from "@/lib/db";
 import { lerPedidos, lerPedido } from "@/lib/pedidos";
 import { montarPool, type PoolResult } from "@/lib/match";
+import { lerPainel } from "@/lib/selecao";
+import PainelPedido from "./PainelPedido";
 
 export const metadata: Metadata = {
   title: "A7Pro · Meus pedidos",
@@ -34,6 +36,10 @@ export default async function PedidosPage({ searchParams }: { searchParams: { no
   const pedidos = await lerPedidos("Blue");
   const novoId = searchParams?.novo ? Number(searchParams.novo) : 0;
 
+  // POOL AO VIVO (S5): foca o pedido recém-criado, senão o aberto mais recente.
+  const focoId = novoId || pedidos.find((p) => p.status === "aberto")?.id || 0;
+  const painelFoco = focoId ? await lerPainel(focoId) : null;
+
   // Para o pedido recém-criado, remonta o pool pra mostrar o PORQUÊ de cada apto.
   let destaque: { pedido: NonNullable<Awaited<ReturnType<typeof lerPedido>>>; pool: PoolResult | null } | null = null;
   if (novoId) {
@@ -56,6 +62,8 @@ export default async function PedidosPage({ searchParams }: { searchParams: { no
       </header>
 
       <main className="wrap">
+        {painelFoco && <PainelPedido initial={painelFoco} />}
+
         {destaque && (
           <section className="panel" style={{ borderColor: "#e3d2a6" }}>
             <div className="ttl">Pool montado · pedido #{destaque.pedido.id}</div>

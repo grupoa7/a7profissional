@@ -177,3 +177,34 @@
 /* ---- estado link inválido ---- */
 .cv-invalid h1 { font-size: 22px; font-weight: 800; letter-spacing: -0.5px; margin: 4px 0 10px; }
 .cv-invalid p { font-size: 15px; line-height: 1.5; color: var(--gray); margin: 0; }
+
+/* ---- S5: botão secundário (recusar) ---- */
+.cv-btn-sec {
+  display: block;
+  width: 100%;
+  margin-top: 10px;
+  padding: 13px 18px;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: var(--white);
+  color: var(--gray);
+  font-size: 14.5px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.cv-btn-sec:hover { background: #faf9f7; }
+.cv-btn-sec:active { transform: translateY(1px); }
+.cv-btn-sec:disabled { opacity: 0.55; cursor: default; }
+
+/* ---- S5: selo "você foi escolhido" ---- */
+.cv-ok-badge.cv-escolhido {
+  color: var(--gold);
+  background: #fbf3e0;
+  border-color: #ecdcb4;
+}
+
+/* ---- S5: bloco revelado (empresa+endereço) com destaque dourado ---- */
+.cv-detalhe-reveal {
+  border-color: #ecdcb4;
+  background: #fffdf8;
+}

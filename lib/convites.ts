@@ -103,7 +103,7 @@ function primeiroNome(nome: string): string {
 }
 
 /** Lê telefone + nome de UM card no banco Pipefy (server-only). Slug telefone = `telefone`. */
-async function lerContatoDoCard(card: string): Promise<{ telefone: string | null; nome: string }> {
+export async function lerContatoDoCard(card: string): Promise<{ telefone: string | null; nome: string }> {
   try {
     const d: any = await pipefyQuery(RECORD_QUERY, { id: card });
     const node = d?.table_record as RawRecord | undefined;
@@ -165,6 +165,7 @@ export type PedidoCego = {
 
 export type ConviteCego = {
   ok: true;
+  revelado: false; // GUARD: a projeção cega NUNCA carrega empresa/endereço.
   bairro: string | null;
   funcao: string | null;
   valor: number | null;
@@ -176,6 +177,16 @@ export type ConviteCego = {
   primeiroNome: string; // saudação (nome do próprio dono do link)
   status: string; // status do CONVITE (enviado/interesse/selecionado/...)
   encerrado: boolean; // pedido fechado/cancelado OU janela passou
+};
+
+// Projeção REVELADA (S5) — só nasce quando o convite está selecionado/confirmado. É uma
+// projeção SEPARADA da cega (guard-rail §7): a empresa+endereço entram AQUI e NUNCA na
+// cega. Quem decide qual projeção sai é o STATUS no Neon, lido pela mesma ref (slug/token).
+export type ConviteRevelado = Omit<ConviteCego, "revelado"> & {
+  revelado: true;
+  empresa: string | null; // revelado ao escolhido
+  endereco: string | null; // revelado ao escolhido
+  prazoConfirmarAte: string | null; // ISO — selecionado_em + 4h (D-D)
 };
 
 function dataFmtBR(d: string | null): string {
@@ -196,6 +207,7 @@ export function projetarCego(
     (!!p.janela_ate && new Date(p.janela_ate).getTime() < Date.now());
   return {
     ok: true,
+    revelado: false,
     bairro: p.bairro ?? null,
     funcao: p.funcao ?? null,
     valor: p.valor ?? null,
@@ -210,7 +222,28 @@ export function projetarCego(
   };
 }
 
-export type ConviteViewResult = ConviteCego | { ok: false; erro: string };
+/** PROJEÇÃO REVELADA — só chamada quando conviteStatus ∈ {selecionado,confirmado}.
+ *  Reaproveita a base cega e ACRESCENTA empresa+endereço+prazo. É IMPOSSÍVEL produzir
+ *  isto sem o status certo (o conviteView só a invoca nesse ramo). */
+export function projetarRevelado(
+  p: PedidoCego,
+  conviteStatus: string,
+  primeiro: string,
+  empresa: string | null,
+  endereco: string | null,
+  prazoConfirmarAte: string | null,
+): ConviteRevelado {
+  const base = projetarCego(p, conviteStatus, primeiro);
+  return {
+    ...base,
+    revelado: true,
+    empresa: empresa ?? null,
+    endereco: endereco ?? null,
+    prazoConfirmarAte: prazoConfirmarAte ?? null,
+  };
+}
+
+export type ConviteViewResult = ConviteCego | ConviteRevelado | { ok: false; erro: string };
 
 /** Resolve a ref (token OU slug) → lê convite + pedido (SÓ campos cegos) → projeta. */
 export async function conviteView(ref: string | null): Promise<ConviteViewResult> {
@@ -218,13 +251,16 @@ export async function conviteView(ref: string | null): Promise<ConviteViewResult
   if (!conviteId) return { ok: false, erro: "link inválido ou expirado" };
   if (!sql) return { ok: false, erro: "indisponível" };
   await ensureTurnosSchema();
-  // Lê só os campos CEGOS do pedido (empresa/endereco NEM são selecionados).
+  // Lê os campos do pedido. empresa/endereco/selecionado_em SÓ são USADOS no ramo revelado
+  // (status selecionado/confirmado). No ramo cego, projetarCego NUNCA os recebe — a projeção
+  // cega é, por construção, incapaz de devolvê-los (guard-rail §7).
   const rows = (await sql`
     select c.card,
            c.status as cstatus,
+           to_char(c.selecionado_em at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"') as selecionado_em,
            p.bairro, p.funcao, p.valor,
            to_char(p.data, 'YYYY-MM-DD') as data,
-           p.hora, p.status as pstatus,
+           p.hora, p.status as pstatus, p.empresa, p.endereco,
            to_char(p.janela_ate at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"') as janela_ate
     from convite c join pedido p on p.id = c.pedido_id
     where c.id = ${conviteId} limit 1
@@ -241,6 +277,15 @@ export async function conviteView(ref: string | null): Promise<ConviteViewResult
     status: r.pstatus,
     janela_ate: r.janela_ate ?? null,
   };
+  // RAMO REVELADO: só quando o convite já foi escolhido (selecionado) ou confirmado.
+  if (r.cstatus === "selecionado" || r.cstatus === "confirmado") {
+    const prazo =
+      r.selecionado_em
+        ? new Date(new Date(r.selecionado_em).getTime() + 4 * 3600_000).toISOString()
+        : null;
+    return projetarRevelado(ped, r.cstatus, primeiroNome(nome), r.empresa ?? null, r.endereco ?? null, prazo);
+  }
+  // RAMO CEGO (default): empresa/endereço NÃO entram na função.
   return projetarCego(ped, r.cstatus, primeiroNome(nome));
 }
 

@@ -90,6 +90,29 @@ export async function ensureTurnosSchema(): Promise<void> {
   } catch {
     /* índice já existe / corrida de DDL — ok */
   }
+  // S5 (26/06): carimbos do funil de seleção/revelação. status agora também trafega
+  // interesse→selecionado→confirmado e o ramo recusado (plano B manual). Idempotente;
+  // DDL de corrida engolida (mesmo motivo do slug acima).
+  try {
+    await sql`alter table convite add column if not exists selecionado_em timestamptz`;
+  } catch {
+    /* coluna já existe / corrida de DDL — ok */
+  }
+  try {
+    await sql`alter table convite add column if not exists confirmado_em timestamptz`;
+  } catch {
+    /* coluna já existe / corrida de DDL — ok */
+  }
+  try {
+    await sql`alter table convite add column if not exists recusado_em timestamptz`;
+  } catch {
+    /* coluna já existe / corrida de DDL — ok */
+  }
+  try {
+    await sql`alter table convite add column if not exists lembretes_escolha int not null default 0`;
+  } catch {
+    /* coluna já existe / corrida de DDL — ok */
+  }
 
   // convite confirmado vira turno (o que acontece de fato).
   await sql`
