@@ -42,7 +42,7 @@ export default async function PortalPage() {
       <header>
         <div className="hd">
           <div className="logo"><span className="mk">a7</span>pro <span className="sub">Banco de Talentos</span></div>
-          <div className="who">{session.email} · <b>Plano Fundador</b><br /><a href="/portal/pedidos" style={{ color: "#9b9c9e", fontSize: 11.5 }}>Meus pedidos</a> · <a href="/api/auth/sair" style={{ color: "#9b9c9e", fontSize: 11.5 }}>Sair</a></div>
+          <div className="who">{session.email} · <b>Plano Fundador</b><br /><a href="/portal/pedidos" style={{ color: "#9b9c9e", fontSize: 11.5 }}>Meus pedidos</a> · <a href="/portal/turnos" style={{ color: "#9b9c9e", fontSize: 11.5 }}>Turnos a avaliar</a> · <a href="/api/auth/sair" style={{ color: "#9b9c9e", fontSize: 11.5 }}>Sair</a></div>
         </div>
       </header>
 

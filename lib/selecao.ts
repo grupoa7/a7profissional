@@ -58,6 +58,10 @@ export type Interessado = {
   telefone: string | null;
   funcao: string | null;
   selo: string;
+  // S6 / D-C: reputação viva (turnos) — exibida só com volume (reputacaoExibivel).
+  reputacaoTurnos: number | null;
+  nTurnos: number;
+  reputacaoExibivel: boolean;
   exato: boolean; // função idêntica à pedida
   status: string; // interesse | selecionado | confirmado | recusado
   selecionadoEm: string | null; // ISO
@@ -135,6 +139,9 @@ export async function lerPainel(pedidoId: number): Promise<PainelPedido | null> 
       telefone: revelaTel ? telefone : null,
       funcao: t?.funcao ?? null,
       selo: t?.selo ?? "B",
+      reputacaoTurnos: t?.reputacaoTurnos ?? null,
+      nTurnos: t?.nTurnos ?? 0,
+      reputacaoExibivel: t?.reputacaoExibivel ?? false,
       exato: !!t?.funcao && norm(t.funcao) === funcaoAlvo,
       status: r.status,
       selecionadoEm: r.selecionado_em,
