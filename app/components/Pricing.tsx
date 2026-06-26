@@ -37,7 +37,7 @@ export function Pricing() {
           <SubscribeButton variant="price" />
           <div style={{ textAlign: "center", marginTop: 11, fontSize: 12, color: "#9b9c9e", fontWeight: 500, lineHeight: 1.4 }}>Preço de lançamento · por tempo limitado</div>
           <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", justifyContent: "center", gap: "7px 12px", marginTop: 16, paddingTop: 15, borderTop: "1px solid #F0F0EB", fontSize: 12.5, color: "#9b9c9e", fontWeight: 500 }}>
-            <span>Apple Pay</span><span style={{ color: "#d8d8d2" }}>·</span><span>Pix</span><span style={{ color: "#d8d8d2" }}>·</span><span>Cartão</span><span style={{ color: "#d8d8d2" }}>·</span><span>self-serve, sem reunião</span>
+            <span>Apple Pay</span><span style={{ color: "#d8d8d2" }}>·</span><span>Cartão</span><span style={{ color: "#d8d8d2" }}>·</span><span>self-serve, sem reunião</span>
           </div>
         </div>
       </div>

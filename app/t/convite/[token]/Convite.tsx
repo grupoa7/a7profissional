@@ -10,6 +10,7 @@
 // A revelação (empresa/endereço) vem do SERVIDOR só quando o status é selecionado/confirmado
 // (projetarRevelado). O componente NUNCA inventa empresa/endereço — usa o que veio em `initial`.
 import { useState } from "react";
+import { BrandMark } from "@/app/components/BrandMark";
 
 type Base = {
   ok: true;
@@ -88,7 +89,7 @@ export default function Convite({ conviteRef, initial }: { conviteRef: string; i
         <div className="cv-detalhe">
           {rev?.empresa && <Linha ic="🏢" k="Empresa" v={rev.empresa} />}
           <Linha ic="📅" k="Quando" v={`${initial.dataFmt} (${initial.diaSemana})`} />
-          <Linha ic="🕐" k="Horário" v={`a partir das ${initial.horaInicio ?? "—"} — 9h no total`} sub="8h de trabalho + 1h de intervalo" />
+          <Linha ic="🕐" k="Horário" v={`a partir das ${initial.horaInicio ?? "—"}, 9h no total`} sub="8h de trabalho + 1h de intervalo" />
           {rev?.endereco
             ? <Linha ic="📍" k="Endereço" v={rev.endereco} />
             : <Linha ic="📍" k="Bairro" v={initial.bairro ?? "—"} />}
@@ -107,7 +108,7 @@ export default function Convite({ conviteRef, initial }: { conviteRef: string; i
       <div className="cv-card">
         <Logo />
         <h1 className="cv-hi">Tudo certo, {initial.primeiroNome}.</h1>
-        <p className="cv-lead">Você abriu mão dessa diária — sem problema nenhum, isso não te prejudica. A empresa segue com a lista e logo aparece outra com a sua cara. 🙂</p>
+        <p className="cv-lead">Você abriu mão dessa diária, sem problema nenhum: isso não te prejudica. A empresa segue com a lista e logo aparece outra com a sua cara. 🙂</p>
       </div>
     );
   }
@@ -124,7 +125,7 @@ export default function Convite({ conviteRef, initial }: { conviteRef: string; i
         <div className="cv-detalhe cv-detalhe-reveal">
           {rev?.empresa && <Linha ic="🏢" k="Empresa" v={rev.empresa} />}
           <Linha ic="📅" k="Quando" v={`${initial.dataFmt} (${initial.diaSemana})`} />
-          <Linha ic="🕐" k="Horário" v={`a partir das ${initial.horaInicio ?? "—"} — 9h no total`} sub="8h de trabalho + 1h de intervalo" />
+          <Linha ic="🕐" k="Horário" v={`a partir das ${initial.horaInicio ?? "—"}, 9h no total`} sub="8h de trabalho + 1h de intervalo" />
           {rev?.endereco
             ? <Linha ic="📍" k="Endereço" v={rev.endereco} sub={initial.bairro ?? undefined} />
             : <Linha ic="📍" k="Bairro" v={initial.bairro ?? "—"} />}
@@ -132,7 +133,7 @@ export default function Convite({ conviteRef, initial }: { conviteRef: string; i
         </div>
 
         <div className="cv-aviso">
-          ⚠️ Só confirme se você <b>realmente vai</b>. Confirmar e não aparecer no dia é o que mais prejudica a sua pontuação. Se não der mais, toque em <b>"Não vou poder"</b> — sem problema, a empresa chama outra pessoa.
+          ⚠️ Só confirme se você <b>realmente vai</b>. Confirmar e não aparecer no dia é o que mais prejudica a sua pontuação. Se não der mais, toque em <b>"Não vou poder"</b>: sem problema, a empresa chama outra pessoa.
         </div>
 
         <button className="cv-btn" disabled={!!pending} onClick={() => acao("confirmar")}>
@@ -153,7 +154,7 @@ export default function Convite({ conviteRef, initial }: { conviteRef: string; i
       <div className="cv-card">
         <Logo />
         <h1 className="cv-hi">Essa oportunidade já encerrou</h1>
-        <p className="cv-lead">Dessa vez não deu — mas fica tranquilo, isso não te prejudica em nada. Logo aparece outra com a sua cara. 🙂</p>
+        <p className="cv-lead">Dessa vez não deu, mas fica tranquilo: isso não te prejudica em nada. Logo aparece outra com a sua cara. 🙂</p>
       </div>
     );
   }
@@ -189,7 +190,7 @@ export default function Convite({ conviteRef, initial }: { conviteRef: string; i
         <Linha
           ic="🕐"
           k="Horário"
-          v={`a partir das ${initial.horaInicio ?? "—"} — 9h no total`}
+          v={`a partir das ${initial.horaInicio ?? "—"}, 9h no total`}
           sub="8h de trabalho + 1h de intervalo"
         />
         <Linha ic="📍" k="Bairro" v={initial.bairro ?? "—"} />
@@ -204,7 +205,7 @@ export default function Convite({ conviteRef, initial }: { conviteRef: string; i
       <p className="cv-pergunta">Você tem disponibilidade nesse dia e horário pra eu te indicar ao A7Pro pra essa empresa?</p>
 
       <div className="cv-aviso">
-        ⚠️ Só toque em <b>Tenho interesse</b> se você puder e quiser mesmo ir. Não poder dessa vez não tem problema nenhum — não te prejudica em nada. O que pega de verdade é dizer sim, ser escolhido e não aparecer no dia. <b>Isso diminui a sua pontuação.</b>
+        ⚠️ Só toque em <b>Tenho interesse</b> se você puder e quiser mesmo ir. Não poder dessa vez não tem problema nenhum, não te prejudica em nada. O que pega de verdade é dizer sim, ser escolhido e não aparecer no dia. <b>Isso diminui a sua pontuação.</b>
       </div>
 
       <p className="cv-urgencia">Quanto antes você confirmar, maior a chance da empresa te convidar.</p>
@@ -222,7 +223,7 @@ export default function Convite({ conviteRef, initial }: { conviteRef: string; i
 function Logo() {
   return (
     <div className="cv-logo">
-      <span className="cv-logo-badge">a7</span>pro
+      <BrandMark size={24} />
     </div>
   );
 }
