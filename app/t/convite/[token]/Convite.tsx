@@ -21,7 +21,7 @@ type ConviteCego = {
 
 const JA_RESPONDEU = new Set(["interesse", "selecionado", "confirmado"]);
 
-export default function Convite({ token, initial }: { token: string; initial: ConviteCego }) {
+export default function Convite({ conviteRef, initial }: { conviteRef: string; initial: ConviteCego }) {
   const jaTopou = JA_RESPONDEU.has(initial.status);
   const [estado, setEstado] = useState<"convite" | "interesse" | "encerrado">(
     initial.encerrado ? "encerrado" : jaTopou ? "interesse" : "convite",
@@ -36,7 +36,7 @@ export default function Convite({ token, initial }: { token: string; initial: Co
       const r = await fetch("/api/t/convite", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ t: token }),
+        body: JSON.stringify({ ref: conviteRef }),
       });
       const d = await r.json();
       if (r.ok && d.ok) setEstado("interesse");

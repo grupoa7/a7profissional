@@ -12,8 +12,9 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function GET(req: Request) {
-  const t = new URL(req.url).searchParams.get("t");
-  const view = await conviteView(t);
+  const q = new URL(req.url).searchParams;
+  const ref = q.get("ref") ?? q.get("t"); // ref = token longo OU slug curto
+  const view = await conviteView(ref);
   if (!view.ok) {
     return NextResponse.json(view, { status: 401, headers: { "cache-control": "no-store" } });
   }
@@ -27,7 +28,7 @@ export async function POST(req: Request) {
   } catch {
     return NextResponse.json({ ok: false, erro: "corpo inválido" }, { status: 400 });
   }
-  const r = await registrarInteresse(body?.t ?? null);
+  const r = await registrarInteresse(body?.ref ?? body?.t ?? null);
   if (!r.ok) {
     const code = r.erro === "encerrado" ? 409 : 401;
     return NextResponse.json(r, { status: code, headers: { "cache-control": "no-store" } });

@@ -1,18 +1,17 @@
-// Página pública do CONVITE CEGO (S4 · sem login). O link mágico É a chave.
-// O servidor valida o token (purpose:"convite") e projeta SÓ os dados cegos
-// (bairro·função·valor·horário·data) — empresa/endereço NUNCA trafegam (revelação = S5).
-// O `conviteId` vem do token assinado; nada de outro convite/titular aparece.
+// Página pública do CONVITE CEGO por LINK CURTO (/c/<slug>) — a cara amigável que
+// mandamos no WhatsApp (o token longo assusta o trabalhador). Mesma tela e mesma lógica
+// cega de /t/convite/[token]: o `slug` é só outra chave pública pro MESMO convite.
 import { conviteView } from "@/lib/convites";
-import Convite from "./Convite";
-import "./convite.css";
+import Convite from "../../t/convite/[token]/Convite";
+import "../../t/convite/[token]/convite.css";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export { conviteMetadata as metadata } from "@/lib/convite-meta";
 
-export default async function Page({ params }: { params: { token: string } }) {
-  const view = await conviteView(params.token);
+export default async function Page({ params }: { params: { slug: string } }) {
+  const view = await conviteView(params.slug);
 
   if (!view.ok) {
     return (
@@ -30,7 +29,7 @@ export default async function Page({ params }: { params: { token: string } }) {
 
   return (
     <main className="cv-wrap">
-      <Convite conviteRef={params.token} initial={view} />
+      <Convite conviteRef={params.slug} initial={view} />
     </main>
   );
 }

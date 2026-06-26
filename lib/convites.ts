@@ -14,19 +14,47 @@
 //   - O telefone (Bloco 2) só sai por `lerConvidadosParaDisparo` (server-only, atrás da
 //     torneira com segredo). NUNCA na rota pública /t/convite nem na querystring.
 //   - score_a7pro/rating do banco Pipefy NUNCA são tocados aqui.
+import crypto from "crypto";
 import { sql, ensureTurnosSchema } from "./db-turnos";
 import { makeConviteToken, verifyConviteToken } from "./auth";
 import { fimDaDiaria, diaSemanaDe } from "./match";
 import { pipefyQuery, rawVal, type RawRecord } from "./pipefy";
 import { siteUrl } from "./site";
 
+// ---- LINK CURTO: slug aleatório (chave pública amigável do convite). Alfabeto sem
+// caracteres ambíguos (0/O, 1/I/l). 55^7 ≈ 1,5 trilhão → colisão desprezível no volume.
+const SLUG_ALFA = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789";
+function gerarSlug(n = 7): string {
+  const b = crypto.randomBytes(n);
+  let s = "";
+  for (let i = 0; i < n; i++) s += SLUG_ALFA[b[i] % SLUG_ALFA.length];
+  return s;
+}
+
+/**
+ * Resolve a referência do convite (o que vem na URL) → conviteId.
+ * Aceita o TOKEN longo (HMAC, purpose:"convite") OU o SLUG curto (lookup no Neon).
+ * Mantém os dois caminhos válidos: o link curto é o que mandamos; o token segue valendo.
+ */
+export async function resolveConviteId(ref: string | null | undefined): Promise<number | null> {
+  if (!ref) return null;
+  const p = verifyConviteToken(ref);
+  if (p) return p.conviteId;
+  // não é token assinado → tenta slug (só formato plausível, evita query à toa)
+  if (!/^[A-Za-z0-9]{4,16}$/.test(ref)) return null;
+  if (!sql) return null;
+  await ensureTurnosSchema();
+  const rows = (await sql`select id from convite where slug = ${ref} limit 1`) as Array<{ id: number }>;
+  return rows.length ? Number(rows[0].id) : null;
+}
+
 // ============================ 1) EMITIR (pool → enviado) ============================
-export type ConviteEmitido = { conviteId: number; card: string; token: string };
+export type ConviteEmitido = { conviteId: number; card: string; token: string; slug: string };
 
 /**
  * Emite os convites de um pedido: para cada `convite status='pool'` (sem token), cunha
- * um token e marca status='enviado' (carimba enviado_em). Idempotente: quem já saiu de
- * 'pool' (já tem token) não é reemitido. Devolve só os recém-emitidos.
+ * token + slug curto e marca status='enviado' (carimba enviado_em). Idempotente: quem já
+ * saiu de 'pool' não é reemitido. Devolve só os recém-emitidos.
  */
 export async function emitirConvites(pedidoId: number): Promise<ConviteEmitido[]> {
   if (!sql) throw new Error("Banco (Neon) indisponível.");
@@ -41,12 +69,13 @@ export async function emitirConvites(pedidoId: number): Promise<ConviteEmitido[]
   for (const c of pend) {
     const conviteId = Number(c.id);
     const token = makeConviteToken(conviteId);
+    const slug = gerarSlug();
     // anti-corrida: só vira 'enviado' se ainda estava 'pool'
     await sql`
-      update convite set token = ${token}, status = 'enviado', enviado_em = now()
+      update convite set token = ${token}, slug = ${slug}, status = 'enviado', enviado_em = now()
       where id = ${conviteId} and status = 'pool'
     `;
-    out.push({ conviteId, card: c.card, token });
+    out.push({ conviteId, card: c.card, token, slug });
   }
   return out;
 }
@@ -98,20 +127,22 @@ export async function lerConvidadosParaDisparo(pedidoId: number): Promise<Convid
   if (!sql) throw new Error("Banco (Neon) indisponível.");
   await ensureTurnosSchema();
   const rows = (await sql`
-    select id, card, token, status from convite
+    select id, card, token, slug, status from convite
     where pedido_id = ${pedidoId} and token is not null and status in ('enviado','interesse')
     order by id asc
-  `) as Array<{ id: number; card: string; token: string; status: string }>;
+  `) as Array<{ id: number; card: string; token: string; slug: string | null; status: string }>;
   const base = siteUrl.replace(/\/$/, "");
   const out: Convidado[] = [];
   for (const r of rows) {
     const { telefone, nome } = await lerContatoDoCard(r.card);
+    // link CURTO amigável (/c/<slug>); cai pro token longo só se faltar slug (legado).
+    const link = r.slug ? `${base}/c/${r.slug}` : `${base}/t/convite/${r.token}`;
     out.push({
       conviteId: Number(r.id),
       card: r.card,
       primeiroNome: primeiroNome(nome),
       telefone,
-      link: `${base}/t/convite/${r.token}`,
+      link,
       status: r.status,
     });
   }
@@ -181,10 +212,10 @@ export function projetarCego(
 
 export type ConviteViewResult = ConviteCego | { ok: false; erro: string };
 
-/** Resolve o token → lê convite + pedido (SÓ campos cegos) → projeta. */
-export async function conviteView(token: string | null): Promise<ConviteViewResult> {
-  const payload = verifyConviteToken(token);
-  if (!payload) return { ok: false, erro: "link inválido ou expirado" };
+/** Resolve a ref (token OU slug) → lê convite + pedido (SÓ campos cegos) → projeta. */
+export async function conviteView(ref: string | null): Promise<ConviteViewResult> {
+  const conviteId = await resolveConviteId(ref);
+  if (!conviteId) return { ok: false, erro: "link inválido ou expirado" };
   if (!sql) return { ok: false, erro: "indisponível" };
   await ensureTurnosSchema();
   // Lê só os campos CEGOS do pedido (empresa/endereco NEM são selecionados).
@@ -196,7 +227,7 @@ export async function conviteView(token: string | null): Promise<ConviteViewResu
            p.hora, p.status as pstatus,
            to_char(p.janela_ate at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"') as janela_ate
     from convite c join pedido p on p.id = c.pedido_id
-    where c.id = ${payload.conviteId} limit 1
+    where c.id = ${conviteId} limit 1
   `) as Array<any>;
   if (!rows.length) return { ok: false, erro: "convite não encontrado" };
   const r = rows[0];
@@ -223,16 +254,16 @@ export type InteresseResult =
  * Rejeita se expirado/encerrado. Se já passou de 'interesse' (selecionado/confirmado),
  * devolve o status atual sem rebaixar.
  */
-export async function registrarInteresse(token: string | null): Promise<InteresseResult> {
-  const payload = verifyConviteToken(token);
-  if (!payload) return { ok: false, erro: "link inválido ou expirado" };
+export async function registrarInteresse(ref: string | null): Promise<InteresseResult> {
+  const conviteId = await resolveConviteId(ref);
+  if (!conviteId) return { ok: false, erro: "link inválido ou expirado" };
   if (!sql) return { ok: false, erro: "indisponível" };
   await ensureTurnosSchema();
   const rows = (await sql`
     select c.status as cstatus, p.status as pstatus,
            to_char(p.janela_ate at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"') as janela_ate
     from convite c join pedido p on p.id = c.pedido_id
-    where c.id = ${payload.conviteId} limit 1
+    where c.id = ${conviteId} limit 1
   `) as Array<any>;
   if (!rows.length) return { ok: false, erro: "convite não encontrado" };
   const r = rows[0];
@@ -245,7 +276,7 @@ export async function registrarInteresse(token: string | null): Promise<Interess
   // idempotente: enviado→interesse; interesse→interesse (preserva o 1º respondido_em).
   await sql`
     update convite set status = 'interesse', respondido_em = coalesce(respondido_em, now())
-    where id = ${payload.conviteId} and status in ('enviado','interesse')
+    where id = ${conviteId} and status in ('enviado','interesse')
   `;
   return { ok: true, status: "interesse" };
 }

@@ -95,7 +95,9 @@ export async function GET(req: Request) {
     // PEEK p/ teste manual/WhatsApp: link FRESCO (último token, intocado pelos passos 4-6,
     // segue 'enviado') no domínio DESTE deploy (preview) — o token HMAC vale em qualquer host.
     const origin = `${url.protocol}//${url.host}`;
-    out.peek_link = `${origin}/t/convite/${emitidos[emitidos.length - 1].token}`;
+    const ultimo = emitidos[emitidos.length - 1];
+    out.peek_link = `${origin}/c/${ultimo.slug}`; // link CURTO amigável
+    out.peek_link_longo = `${origin}/t/convite/${ultimo.token}`; // token longo (ainda válido)
 
     // ---------- 3) VIEW CEGA: prova que NÃO vaza empresa/endereco/telefone ----------
     const view: any = await conviteView(tokenA);

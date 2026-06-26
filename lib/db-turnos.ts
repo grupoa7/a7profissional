@@ -68,12 +68,17 @@ export async function ensureTurnosSchema(): Promise<void> {
       id            bigint generated always as identity primary key,
       pedido_id     bigint not null references pedido(id) on delete cascade,
       card          text not null,                   -- id do table_record (liga ao banco/CPF)
-      token         text unique,                     -- link mágico do convite cego
+      token         text unique,                     -- link mágico do convite cego (legado/longo)
       status        text not null default 'enviado',
       enviado_em    timestamptz not null default now(),
       respondido_em timestamptz
     )
   `;
+  // S4 (26/06): LINK CURTO amigável (`/c/<slug>`) — o token longo assusta o trabalhador
+  // (parece golpe). O `slug` é um código curto aleatório, chave pública do convite.
+  // Idempotente. Índice único parcial (vários nulls ok no Postgres).
+  await sql`alter table convite add column if not exists slug text`;
+  await sql`create unique index if not exists convite_slug_uk on convite(slug)`;
 
   // convite confirmado vira turno (o que acontece de fato).
   await sql`
