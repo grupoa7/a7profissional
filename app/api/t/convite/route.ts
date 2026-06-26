@@ -1,12 +1,13 @@
-// API PÚBLICA do CONVITE CEGO (S4 · sem login). O link mágico É a chave.
-// GET  ?t=<token>  → conviteView (payload CEGO — NUNCA empresa/endereco).
-// POST { t }       → registrarInteresse (enviado→interesse, idempotente).
+// API PÚBLICA do CONVITE (S4 cego + S5 ciclo do trabalhador). O link mágico É a chave.
+// GET  ?ref=<slug|token>          → conviteView (CEGO ou REVELADO conforme o status).
+// POST { ref, acao }              → interesse | confirmar | recusar.
 //
-// GUARD ÚNICO = validade do token (purpose:"convite", carrega o conviteId). NUNCA
-// aceitamos conviteId/card por parâmetro → impossível abrir convite de outro (LGPD).
-// O telefone do diarista NÃO sai por aqui — só pela torneira /emitir, atrás de segredo.
+// GUARD ÚNICO = a ref (slug curto OU token assinado), que resolve pro conviteId no servidor.
+// NUNCA aceitamos conviteId/card por parâmetro → impossível agir sobre o convite de outro
+// (LGPD). O telefone do diarista NÃO sai por aqui — só pela torneira /emitir, atrás de segredo.
 import { NextResponse } from "next/server";
 import { conviteView, registrarInteresse } from "@/lib/convites";
+import { confirmarPresenca, recusar } from "@/lib/selecao";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -28,7 +29,14 @@ export async function POST(req: Request) {
   } catch {
     return NextResponse.json({ ok: false, erro: "corpo inválido" }, { status: 400 });
   }
-  const r = await registrarInteresse(body?.ref ?? body?.t ?? null);
+  const ref = body?.ref ?? body?.t ?? null;
+  const acao = (body?.acao ?? "interesse") as string;
+
+  let r: { ok: boolean; erro?: string };
+  if (acao === "confirmar") r = await confirmarPresenca(ref);
+  else if (acao === "recusar") r = await recusar(ref);
+  else r = await registrarInteresse(ref); // default = "interesse" (compat S4)
+
   if (!r.ok) {
     const code = r.erro === "encerrado" ? 409 : 401;
     return NextResponse.json(r, { status: code, headers: { "cache-control": "no-store" } });
