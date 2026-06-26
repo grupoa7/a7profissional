@@ -74,6 +74,10 @@ export async function GET(req: Request) {
     };
     if (!emitidos.length) throw new Error("pool vazio — não dá pra provar o convite (ampliar valor/dia)");
     const tokenA = emitidos[0].token;
+    // PEEK p/ teste manual/WhatsApp: link FRESCO (último token, intocado pelos passos 4-6,
+    // segue 'enviado') no domínio DESTE deploy (preview) — o token HMAC vale em qualquer host.
+    const origin = `${url.protocol}//${url.host}`;
+    out.peek_link = `${origin}/t/convite/${emitidos[emitidos.length - 1].token}`;
 
     // ---------- 3) VIEW CEGA: prova que NÃO vaza empresa/endereco/telefone ----------
     const view: any = await conviteView(tokenA);
