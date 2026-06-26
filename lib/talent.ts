@@ -17,7 +17,15 @@ const S = {
   dataPrefs: "data_da_declaracao_de_prefs",
   consentimento: "status_do_consentimento",
   funcao: "funcao", // ainda não existe no banco — lido como opcional (ver nota abaixo)
+  // S6 (26/06): reputação VIVA (turnos) — gravada pela projeção REPUT v1.0. Sinal SEPARADO
+  // do selo de entrada (rating). Lida aqui só pra EXIBIÇÃO (D-C), nunca vira filtro.
+  reputacao: "reputacao_turnos",
+  nTurnos: "n_turnos",
 } as const;
+
+// D-C (decisão Hugo): a reputação viva SÓ aparece na vitrine quando há volume — começa
+// interno (sempre gravada no banco), liga a exibição quando n_turnos atinge o mínimo.
+export const MIN_TURNOS_EXIBE = 3;
 
 // Selos exibíveis (v1.3 — 24/06/2026): corte de exibição baixou de 50 (só A+) para 40.
 // Agora B e NOVATA também aparecem (B = histórico inicial; NOVATA = aposta de formação, CTPS vazia).
@@ -41,6 +49,11 @@ export type TalentCard = {
   valorFds: number | null;
   trabalhosConcluidos: number; // 0 no MVP → "Primeira oportunidade via A7Pro"
   atualizadoEm: string | null; // ISO date (carimbo dos campos 3–6)
+  // S6 / D-C: reputação viva. `reputacaoExibivel` aplica a regra do volume (>= MIN_TURNOS_EXIBE).
+  // Sempre presente no DTO; a UI decide exibir o badge só quando `reputacaoExibivel`.
+  reputacaoTurnos: number | null;
+  nTurnos: number;
+  reputacaoExibivel: boolean;
 };
 
 function asArray(v: string | string[] | null): string[] {
@@ -122,6 +135,12 @@ function toCard(node: RawRecord): TalentCard {
   const funcaoRaw = (rawVal(node, S.funcao) as string | null)?.trim() || null;
   // 'A CONFERIR' é interno: trata como não-classificada (null) — não exibe nem filtra.
   const funcao = funcaoRaw && funcaoRaw !== FUNCAO_A_CONFERIR ? funcaoRaw : null;
+  // reputação viva (S6): os 4 campos são gravados pela projeção REPUT v1.0 no banco.
+  const repRaw = rawVal(node, S.reputacao);
+  const nRaw = rawVal(node, S.nTurnos);
+  const nTurnos = Math.max(0, Math.floor(Number(Array.isArray(nRaw) ? nRaw[0] : nRaw)) || 0);
+  const repNum = Number(Array.isArray(repRaw) ? repRaw[0] : repRaw);
+  const reputacaoTurnos = Number.isFinite(repNum) && nTurnos > 0 ? repNum : null;
   return {
     id: node.id,
     nomeParcial: nomeParcial(nome),
@@ -131,8 +150,11 @@ function toCard(node: RawRecord): TalentCard {
     turnos: asArray(rawVal(node, S.turnos)),
     valorSegSex: asMoney(rawVal(node, S.valSegSex)),
     valorFds: asMoney(rawVal(node, S.valFds)),
-    trabalhosConcluidos: 0, // Fase 2: virá do motor de reputação
+    trabalhosConcluidos: nTurnos, // S6: nº de turnos avaliados (era 0 no MVP)
     atualizadoEm: parseISO(rawVal(node, S.dataPrefs) as string | null),
+    reputacaoTurnos,
+    nTurnos,
+    reputacaoExibivel: reputacaoTurnos != null && nTurnos >= MIN_TURNOS_EXIBE,
   };
 }
 

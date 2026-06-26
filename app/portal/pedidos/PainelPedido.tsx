@@ -14,6 +14,9 @@ type Interessado = {
   telefone: string | null;
   funcao: string | null;
   selo: string;
+  reputacaoTurnos: number | null;
+  nTurnos: number;
+  reputacaoExibivel: boolean;
   exato: boolean;
   status: string;
   selecionadoEm: string | null;
@@ -171,7 +174,15 @@ export default function PainelPedido({ initial }: { initial: Painel }) {
                   <b>{i.nome}</b>{" "}
                   <span style={{ color: "#7a7b7e", fontSize: 12.5 }}>· {i.funcao ?? "—"}</span>
                 </div>
-                <span className={`selo ${i.selo}`} style={{ flexShrink: 0 }}>{i.selo === "NOVATA" ? "NOVO" : i.selo}</span>
+                <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
+                  {/* D-C: badge de reputação viva — só com volume (n_turnos >= 3). Separado do selo. */}
+                  {i.reputacaoExibivel && i.reputacaoTurnos != null && (
+                    <span title={`Reputação de ${i.nTurnos} turno(s) avaliado(s)`} style={{ fontSize: 11.5, fontWeight: 700, color: "#ae863f", background: "#fbf6e9", border: "1px solid #ecd9a3", borderRadius: 20, padding: "2px 9px", whiteSpace: "nowrap" }}>
+                      ★ {i.reputacaoTurnos} · {i.nTurnos} turnos
+                    </span>
+                  )}
+                  <span className={`selo ${i.selo}`}>{i.selo === "NOVATA" ? "NOVO" : i.selo}</span>
+                </div>
               </div>
 
               <div style={{ marginTop: 6, fontSize: 12.5, color: "#46474b" }}>

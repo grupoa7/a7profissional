@@ -151,6 +151,28 @@ export async function ensureTurnosSchema(): Promise<void> {
       criado_em       timestamptz not null default now()
     )
   `;
+  // S6 (26/06): D-B (decisão Hugo). O livro-razão é APPEND-ONLY (imutável) — não se
+  // edita nem se apaga uma linha. Mas uma avaliação pode ser ANULADA depois (a empresa
+  // que errou pede pra não contar, OU o trabalhador contesta e o A7Pro acata). Anular =
+  // marcar a linha como `anulada=true` (estorno), nunca deletar: a projeção (lerLivroRazao)
+  // ignora linhas anuladas, mas o histórico cru fica auditável. Ação ADMINISTRATIVA interna
+  // (sem UI nesta sessão). DDL com IF NOT EXISTS NÃO é à prova de corrida no Postgres
+  // serverless → engole o erro (mesmo padrão do slug/seleção em S4/S5).
+  try {
+    await sql`alter table avaliacao add column if not exists anulada boolean not null default false`;
+  } catch {
+    /* coluna já existe / corrida de DDL — ok */
+  }
+  try {
+    await sql`alter table avaliacao add column if not exists motivo_anulacao text`;
+  } catch {
+    /* coluna já existe / corrida de DDL — ok */
+  }
+  try {
+    await sql`alter table avaliacao add column if not exists anulada_em timestamptz`;
+  } catch {
+    /* coluna já existe / corrida de DDL — ok */
+  }
 
   schemaReady = true;
 }
@@ -190,7 +212,9 @@ export type ReputacaoCard = {
   data_ultima_avaliacao: string | null;
 };
 
-/** Lê o livro-razão (avaliacao) com a data do turno (join) — insumo cru da projeção. */
+/** Lê o livro-razão (avaliacao) com a data do turno (join) — insumo cru da projeção.
+ *  Linhas ANULADAS (D-B) ficam de fora da projeção: estorno não conta na reputação,
+ *  mas a linha crua segue no banco pra auditoria. */
 export async function lerLivroRazao(): Promise<AvaliacaoRow[]> {
   if (!sql) return [];
   await ensureTurnosSchema();
@@ -202,6 +226,7 @@ export async function lerLivroRazao(): Promise<AvaliacaoRow[]> {
            to_char(t.data_do_turno, 'YYYY-MM-DD') as data_do_turno
     from avaliacao a
     left join turno t on t.id = a.turno_id
+    where not a.anulada
   `) as Array<AvaliacaoRow>;
   return rows;
 }
