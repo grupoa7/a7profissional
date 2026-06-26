@@ -38,6 +38,24 @@ export async function GET(req: Request) {
   if (url.searchParams.get("k") !== KEY) return NextResponse.json({ erro: "nope" }, { status: 404 });
   const out: any = { ok: true, etapas: {} };
   const criados: number[] = [];
+
+  // PURGE: apaga TODOS os pedidos de teste criados por esta rota (identificados pelos
+  // endereços-sentinela), sem criar novos. Pra limpar o Neon antes do merge.
+  if (url.searchParams.get("purge") === "1") {
+    if (!sql) return NextResponse.json({ ok: false, erro: "Neon indisponível" }, { status: 500 });
+    try {
+      const apagados = (await sql`
+        delete from pedido
+        where endereco in ('RUA-OCULTA-TESTE-999, Bloco Z', 'OUTRO-ENDERECO')
+        returning id
+      `) as Array<{ id: number }>;
+      const rest = (await sql`select count(*)::int as n from pedido where endereco in ('RUA-OCULTA-TESTE-999, Bloco Z','OUTRO-ENDERECO')`) as Array<{ n: number }>;
+      return NextResponse.json({ ok: true, purge: true, pedidos_apagados: apagados.map((r) => Number(r.id)), restantes: rest[0]?.n });
+    } catch (e: any) {
+      return NextResponse.json({ ok: false, erro: String(e?.message || e) }, { status: 500 });
+    }
+  }
+
   try {
     if (!sql) throw new Error("Neon indisponível (DATABASE_URL no ambiente?)");
 
