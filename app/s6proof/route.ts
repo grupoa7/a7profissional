@@ -10,15 +10,20 @@ import { NextResponse } from "next/server";
 import { sql, ensureTurnosSchema } from "@/lib/db-turnos";
 import { getTalentCards } from "@/lib/talent";
 import { lerCardParaProva, limparReputacaoDoCard } from "@/lib/reputacao";
+import { getSession, isDogfood } from "@/lib/auth";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const EMPRESA = "Blue";
 
+// Gate: sessão dogfood (hugo@/rh@) OU ?k=<AUTH_SECRET|REPUTACAO_SECRET>. A via de sessão
+// evita colar segredo na URL — a prova roda logada. Rota TEMP, removida antes do merge.
 function ok(k: string | null): boolean {
+  const s = getSession();
+  if (s && isDogfood(s.email)) return true;
   const secret = process.env.AUTH_SECRET || process.env.REPUTACAO_SECRET || "";
-  return !!secret && k === secret;
+  return !!secret && !!k && k === secret;
 }
 
 export async function GET(req: Request) {
