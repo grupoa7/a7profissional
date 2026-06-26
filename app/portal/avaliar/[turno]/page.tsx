@@ -8,6 +8,7 @@ import { getSession, isDogfood } from "@/lib/auth";
 import { isActiveSubscriber } from "@/lib/db";
 import { lerTurnoParaAvaliar } from "@/lib/avaliacao";
 import AvaliarForm from "./AvaliarForm";
+import { BrandMark } from "@/app/components/BrandMark";
 
 export const metadata: Metadata = {
   title: "A7Pro · Avaliar turno",
@@ -42,7 +43,7 @@ export default async function AvaliarPage({ params }: { params: { turno: string 
     <>
       <header>
         <div className="hd">
-          <div className="logo"><span className="mk">a7</span>pro <span className="sub">Avaliar turno</span></div>
+          <div className="logo"><BrandMark size={24} sub="Avaliar turno" /></div>
           <div className="who">{session.email} · <b>Plano Fundador</b><br />
             <a href="/portal/turnos" style={{ color: "#9b9c9e", fontSize: 11.5 }}>← Turnos a avaliar</a> · <a href="/api/auth/sair" style={{ color: "#9b9c9e", fontSize: 11.5 }}>Sair</a>
           </div>

@@ -84,26 +84,12 @@ export default function AvaliarForm({
 
   // ---------- ESTADO PÓS-ENVIO ----------
   if (done) {
-    const rep = done.prova.reputacao;
-    const intoc = done.prova.intocaveis;
     return (
       <div style={{ marginTop: 16 }}>
         <div className="reserva" style={{ background: "#f0f7ee", borderColor: "#cfe6c6", borderLeftColor: "#2f7d52" }}>
           <span className="ic" style={{ color: "#2f7d52" }}>✓</span>
           <div>
-            Avaliação de <b>{nome}</b> registrada. A reputação foi atualizada na plataforma.
-          </div>
-        </div>
-        <div style={{ marginTop: 14, border: "1px solid #ece7da", borderRadius: 12, padding: "14px 16px", background: "#fff" }}>
-          <div style={{ fontSize: 12.5, fontWeight: 700, color: "#46474b", marginBottom: 8 }}>Reputação viva (turnos)</div>
-          <div style={{ display: "flex", gap: 18, flexWrap: "wrap", fontSize: 14 }}>
-            <div>★ <b>{String(rep.reputacao_turnos ?? "—")}</b></div>
-            <div><b>{String(rep.n_turnos ?? "—")}</b> turno(s)</div>
-            <div style={{ color: "#7a7b7e" }}>última: {String(rep.data_ultima_avaliacao ?? "—")}</div>
-            <div style={{ color: "#7a7b7e" }}>{String(rep.versao_da_formula_reputacao ?? "—")}</div>
-          </div>
-          <div style={{ marginTop: 10, paddingTop: 10, borderTop: "1px dashed #ece7da", fontSize: 12, color: "#7a7b7e" }}>
-            Selo de entrada <b style={{ color: "#46474b" }}>intacto</b>: score {String(intoc.score_a7pro ?? "—")} · rating {String(intoc.rating ?? "—")}. A reputação dos turnos é um sinal <b>separado</b> do selo — não o sobrescreve.
+            Pronto! A avaliação de <b>{nome}</b> foi registrada. Ela entra na reputação do profissional e ajuda a próxima empresa a escolher melhor. O selo de entrada dele não muda.
           </div>
         </div>
         <div style={{ marginTop: 16, display: "flex", gap: 10 }}>

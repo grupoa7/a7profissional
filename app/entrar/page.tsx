@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
+import { BrandMark } from "../components/BrandMark";
 import "./entrar.css";
 
 export const metadata: Metadata = {
-  title: "Entrar · A7Pro — Portal da Empresa",
+  title: "Entrar · A7Pro · Portal da Empresa",
   robots: { index: false, follow: false },
 };
 
@@ -41,14 +42,14 @@ export default function EntrarPage({
     <div className="entrar-wrap">
       <div className="entrar-card">
         <div className="entrar-logo">
-          <span className="mk">a7</span>pro
+          <BrandMark size={26} />
         </div>
         <div className="entrar-sub">Banco de Talentos · Portal da Empresa</div>
 
         <h1>Entrar</h1>
         <p className="lead">
           Acesso exclusivo de empresas parceiras. Informe seu e-mail e enviamos um
-          link de entrada — sem senha.
+          link de entrada, sem senha.
         </p>
 
         {msg && <div className={`entrar-msg ${msg.tipo}`}>{msg.texto}</div>}

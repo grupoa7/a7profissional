@@ -4,6 +4,7 @@
 // O `conviteId` vem do token assinado; nada de outro convite/titular aparece.
 import { conviteView } from "@/lib/convites";
 import Convite from "./Convite";
+import { BrandMark } from "@/app/components/BrandMark";
 import "./convite.css";
 
 export const runtime = "nodejs";
@@ -19,7 +20,7 @@ export default async function Page({ params }: { params: { token: string } }) {
       <main className="cv-wrap">
         <div className="cv-card cv-invalid">
           <div className="cv-logo">
-            <span className="cv-logo-badge">a7</span>pro
+            <BrandMark size={24} />
           </div>
           <h1>Esse convite não está mais valendo 😕</h1>
           <p>Pode ser que tenha expirado ou já tenha sido encerrado. Se ainda tiver interesse, chama a gente que a gente te avisa na próxima.</p>

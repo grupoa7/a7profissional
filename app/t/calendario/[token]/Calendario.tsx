@@ -4,6 +4,7 @@
 // autodeclarado, com renovação de 1 toque. Não navega vagas, não tem feed, nem
 // reputação (DESIGN-BRIEF §3c).
 import { useMemo, useState } from "react";
+import { BrandMark } from "@/app/components/BrandMark";
 
 const DIAS: Array<{ v: string; curto: string }> = [
   { v: "Segunda", curto: "Seg" },
@@ -122,7 +123,7 @@ export default function Calendario({ token, initial }: { token: string; initial:
   return (
     <div className="cal-card">
       <div className="cal-logo">
-        <span className="cal-logo-badge">a7</span>pro
+        <BrandMark size={24} />
       </div>
 
       <h1 className="cal-hi">{saudacao}</h1>
