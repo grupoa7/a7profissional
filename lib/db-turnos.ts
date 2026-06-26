@@ -68,12 +68,28 @@ export async function ensureTurnosSchema(): Promise<void> {
       id            bigint generated always as identity primary key,
       pedido_id     bigint not null references pedido(id) on delete cascade,
       card          text not null,                   -- id do table_record (liga ao banco/CPF)
-      token         text unique,                     -- link mágico do convite cego
+      token         text unique,                     -- link mágico do convite cego (legado/longo)
       status        text not null default 'enviado',
       enviado_em    timestamptz not null default now(),
       respondido_em timestamptz
     )
   `;
+  // S4 (26/06): LINK CURTO amigável (`/c/<slug>`) — o token longo assusta o trabalhador
+  // (parece golpe). O `slug` é um código curto aleatório, chave pública do convite.
+  // `add column`/`create index` com IF NOT EXISTS NÃO são à prova de concorrência no
+  // Postgres (duas inicializações simultâneas colidem no catálogo: erro
+  // "pg_class_relname_nsp_index"/"already exists"). Como só queremos que existam, engolimos
+  // o erro de corrida — a próxima init (ou esta, noutra invocação) encontra tudo pronto.
+  try {
+    await sql`alter table convite add column if not exists slug text`;
+  } catch {
+    /* coluna já existe / corrida de DDL — ok */
+  }
+  try {
+    await sql`create unique index if not exists convite_slug_uk on convite(slug)`;
+  } catch {
+    /* índice já existe / corrida de DDL — ok */
+  }
 
   // convite confirmado vira turno (o que acontece de fato).
   await sql`
