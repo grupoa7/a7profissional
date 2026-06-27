@@ -6,6 +6,8 @@
 // materializamos que o pool nasceu. `endereco` da empresa fica OCULTO (convite cego,
 // revelado só na seleção — S5); em S3 nem trafega pro lado trabalhador.
 import { sql, ensureTurnosSchema } from "./db-turnos";
+import { montarPool } from "./match";
+import { emitirConvites } from "./convites";
 
 export type CriarPedidoInput = {
   empresa: string; // "Blue" no Cliente 00
@@ -17,6 +19,10 @@ export type CriarPedidoInput = {
   bairro?: string | null;
   endereco?: string | null; // oculto até a seleção (S5)
   janelaAte?: string | null; // ISO; default null (janela ao vivo é S5)
+  // S7 (mecânica Uber assíncrona): o pedido nasce 'buscando' (a montagem do pool roda
+  // DEPOIS, em background, via /api/portal/montar). Quem não passa status cai em 'aberto'
+  // (compatível com o fluxo antigo/síncrono). Status é text livre — sem DDL.
+  status?: string;
 };
 
 /** Cria o pedido no Neon e devolve o id. */
@@ -28,11 +34,77 @@ export async function criarPedido(p: CriarPedidoInput): Promise<number> {
     values (
       ${p.empresa}, ${p.funcao}, ${p.bairro ?? null}, ${p.endereco ?? null},
       ${p.data}::date, ${p.inicio}, ${p.valor}, ${Math.max(1, p.vagas)},
-      ${p.janelaAte ?? null}, 'aberto'
+      ${p.janelaAte ?? null}, ${p.status ?? "aberto"}
     )
     returning id
   `) as Array<{ id: number }>;
   return Number(rows[0].id);
+}
+
+/** Conta os convites (pool) de um pedido. Helper interno da montagem assíncrona. */
+async function contarPool(pedidoId: number): Promise<number> {
+  if (!sql) return 0;
+  const r = (await sql`select count(*)::int as n from convite where pedido_id = ${pedidoId}`) as Array<{ n: number }>;
+  return r[0]?.n ?? 0;
+}
+
+export type MontarBuscaResult =
+  | { ok: true; status: string; total: number; emitidos: number; jaProcessado?: boolean }
+  | { ok: false; erro: string };
+
+/**
+ * TRABALHO PESADO da busca (S7 · assíncrono). Roda DEPOIS da convocação, disparado pelo
+ * client via POST /api/portal/montar. Faz, nesta ordem, exatamente o que o `convocar()`
+ * síncrono fazia — só que fora do caminho que trava a tela:
+ *   montarPool (match, ~lento no Pipefy) → persistirPool → emitirConvites
+ * e então vira o pedido de 'buscando' → 'aberto' (transição condicional anti-corrida).
+ *
+ * NÃO toca a lógica provada por dentro (match/persistir/emitir intactos — S3/S4). Só muda
+ * QUANDO/ONDE são chamados.
+ *
+ * SEGURO PRA RE-DISPARAR E RODAR EM PARALELO (o auto-retry do painel depende disso):
+ *   - persistirPool é idempotente por (pedido_id, card);
+ *   - emitirConvites só toca quem está em 'pool' SEM token (UPDATE condicional);
+ *   - a virada final é `where status='buscando'` (só um disparo "ganha").
+ * Se falhar no meio, o pedido FICA em 'buscando' (não rebaixa nada) e um retry recupera.
+ * Se já saiu de 'buscando', devolve o estado atual sem reprocessar (idempotente).
+ */
+export async function montarBusca(pedidoId: number): Promise<MontarBuscaResult> {
+  if (!sql) return { ok: false, erro: "Banco (Neon) indisponível." };
+  await ensureTurnosSchema();
+  const rows = (await sql`
+    select id, funcao, to_char(data, 'YYYY-MM-DD') as data, hora, valor, vagas, status
+    from pedido where id = ${pedidoId} limit 1
+  `) as Array<{ id: number; funcao: string | null; data: string | null; hora: string | null; valor: number | null; vagas: number; status: string }>;
+  if (!rows.length) return { ok: false, erro: "pedido não encontrado" };
+  const p = rows[0];
+
+  // já saiu de 'buscando' → idempotente (outra aba / retry já montou). Não refaz.
+  if (p.status !== "buscando") {
+    const total = await contarPool(pedidoId);
+    return { ok: true, status: p.status, total, emitidos: total, jaProcessado: true };
+  }
+  if (!p.funcao || !p.data || !p.hora || p.valor == null) {
+    return { ok: false, erro: "pedido sem dados para montar a busca" };
+  }
+
+  try {
+    const pool = await montarPool({
+      funcao: p.funcao,
+      data: p.data,
+      inicio: p.hora,
+      valor: Number(p.valor),
+      vagas: Number(p.vagas),
+    });
+    await persistirPool(pedidoId, pool.aptos.map((a) => a.card));
+    const emitidos = await emitirConvites(pedidoId);
+    // transição final (anti-corrida): só de 'buscando' → 'aberto'.
+    await sql`update pedido set status = 'aberto' where id = ${pedidoId} and status = 'buscando'`;
+    return { ok: true, status: "aberto", total: pool.total, emitidos: emitidos.length };
+  } catch {
+    // falhou no meio: NÃO mexe no status (fica 'buscando') → o retry do painel recupera.
+    return { ok: false, erro: "não consegui montar a busca agora" };
+  }
 }
 
 /**
@@ -103,6 +175,20 @@ export async function lerPedidos(empresa: string): Promise<PedidoRow[]> {
     enviado: Number(r.enviado),
     interesse: Number(r.interesse),
   }));
+}
+
+/** O pedido VIVO mais recente da empresa (status 'buscando' ou 'aberto'), ou null.
+ *  S7: a /portal usa isto pra reexibir o painel inline da busca em andamento mesmo
+ *  depois de um refresh (continuidade estilo Uber). */
+export async function lerPedidoVivo(empresa: string): Promise<number | null> {
+  if (!sql) return null;
+  await ensureTurnosSchema();
+  const r = (await sql`
+    select id from pedido
+    where empresa = ${empresa} and status in ('buscando', 'aberto')
+    order by id desc limit 1
+  `) as Array<{ id: number }>;
+  return r.length ? Number(r[0].id) : null;
 }
 
 /** Cards (ids) do pool de um pedido — pra rehidratar o "porquê" via match na tela. */

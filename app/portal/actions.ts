@@ -1,14 +1,16 @@
 "use server";
-// Server action de CONVOCAÇÃO (S3 + S4). Roda no servidor (tem AUTH_SECRET/DATABASE_URL/
-// PIPEFY_TOKEN). Gateia pela sessão da empresa, monta o pool (match via Neon), persiste
-// pedido + convites status='pool' e — S4 / decisão Hugo D-B (modelo de dois convites) —
-// EMITE os convites na mesma operação (pool→enviado, cunha token). O disparo da mensagem
-// CEGA no WhatsApp é feito pela Skill, que lê a torneira /api/t/convite/emitir.
+// Server action de CONVOCAÇÃO (S3+S4, refeita em S7 · mecânica Uber ASSÍNCRONA).
+// Roda no servidor (tem AUTH_SECRET/DATABASE_URL/PIPEFY_TOKEN). Gateia pela sessão da
+// empresa, valida o pedido e — diferente do fluxo antigo — apenas CRIA o pedido com
+// status='buscando' e devolve o id em milissegundos. O trabalho pesado (montar o pool no
+// match via Pipefy, persistir e emitir os convites) saiu daqui para a rota
+// /api/portal/montar, disparada pelo client logo em seguida, para não travar a tela
+// (a montagem leva ~10s). A mensagem CEGA no WhatsApp segue saindo pela Skill, que lê a
+// torneira /api/t/convite/emitir depois que a montagem emite os tokens.
 import { getSession, isDogfood } from "@/lib/auth";
 import { isActiveSubscriber } from "@/lib/db";
-import { montarPool, type PedidoInput } from "@/lib/match";
-import { criarPedido, persistirPool } from "@/lib/pedidos";
-import { emitirConvites } from "@/lib/convites";
+import { type PedidoInput } from "@/lib/match";
+import { criarPedido } from "@/lib/pedidos";
 
 // Cliente 00: o dogfood interno opera como a empresa "Blue".
 function empresaDaSessao(_email: string): string {
@@ -21,15 +23,10 @@ function empresaDaSessao(_email: string): string {
 type ConvocarInput = PedidoInput & { bairro?: string; endereco?: string };
 
 // NÃO exportar (módulo "use server" só pode exportar funções async). Tipo interno.
+// S7: a convocação devolve só o pedidoId (rápido). O pool/convites nascem depois, na
+// rota /api/portal/montar, e a tela acompanha pelo polling do painel.
 type ConvocarResult =
-  | {
-      ok: true;
-      pedidoId: number;
-      total: number;
-      metaMinima: number;
-      atingiuMinimo: boolean;
-      emitidos: number;
-    }
+  | { ok: true; pedidoId: number }
   | { ok: false; erro: string };
 
 export async function convocar(input: ConvocarInput): Promise<ConvocarResult> {
@@ -51,12 +48,14 @@ export async function convocar(input: ConvocarInput): Promise<ConvocarResult> {
     return { ok: false, erro: "Preencha função, data, horário, valor e quantas pessoas." };
   }
   if (!bairro) {
-    return { ok: false, erro: "Informe o bairro — é o que o convite cego mostra ao profissional." };
+    return { ok: false, erro: "Informe o bairro. É o único dado de local que o profissional vê." };
   }
 
   try {
-    const pool = await montarPool({ funcao, data, inicio, valor, vagas });
     const empresa = empresaDaSessao(session.email);
+    // S7: nasce 'buscando' (rápido). O pool e os convites são montados depois, em
+    // background, pela rota /api/portal/montar (disparada pelo client). Os ~10s de match
+    // saem do caminho que trava a tela.
     const pedidoId = await criarPedido({
       empresa,
       funcao,
@@ -66,20 +65,10 @@ export async function convocar(input: ConvocarInput): Promise<ConvocarResult> {
       vagas,
       bairro,
       endereco: endereco || null, // oculto até a seleção (S5)
+      status: "buscando",
     });
-    await persistirPool(pedidoId, pool.aptos.map((a) => a.card));
-    // D-B: disparo "automático" — emite os tokens já na convocação. A mensagem CEGA
-    // sai pela Skill (carteiro WhatsApp), lendo a torneira /api/t/convite/emitir.
-    const emitidos = await emitirConvites(pedidoId);
-    return {
-      ok: true,
-      pedidoId,
-      total: pool.total,
-      metaMinima: pool.metaMinima,
-      atingiuMinimo: pool.atingiuMinimo,
-      emitidos: emitidos.length,
-    };
+    return { ok: true, pedidoId };
   } catch {
-    return { ok: false, erro: "Não consegui montar o pool agora. Tente de novo em instantes." };
+    return { ok: false, erro: "Não consegui registrar sua busca agora. Tente de novo em instantes." };
   }
 }
