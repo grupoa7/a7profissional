@@ -161,15 +161,20 @@ export default function PainelPedido({
   const buscando = painel.status === "buscando";
   const aberto = painel.status === "aberto";
   const fechado = !buscando && !aberto;
-  const semInteresse = aberto && painel.interessados.length === 0;
+  const semGente = aberto && painel.interessados.length === 0;
+  // VAZIO: a montagem terminou (status 'aberto') e nenhum profissional apto foi encontrado
+  // (0 convites emitidos) → comunicação positiva/acionável, NÃO "aguarde respostas".
+  const vazio = semGente && painel.enviado === 0;
+  // AGUARDANDO: há convites no ar, esperando os profissionais toparem.
+  const aguardando = semGente && painel.enviado > 0;
   const faltam = Math.max(0, painel.vagas - painel.confirmado);
 
   return (
     <section className="panel" style={{ borderColor: "#e3d2a6", marginBottom: 14 }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
         <div className="ttl" style={{ margin: 0 }}>Sua busca · #{painel.pedidoId}</div>
-        <span style={{ fontSize: 11.5, color: fechado ? "#9b9c9e" : vivo ? "#2f7d52" : "#9b9c9e" }}>
-          {fechado ? "● encerrada" : buscando ? "● buscando" : vivo ? "● ao vivo" : "○ reconectando…"}
+        <span style={{ fontSize: 11.5, color: fechado || vazio ? "#9b9c9e" : vivo ? "#2f7d52" : "#9b9c9e" }}>
+          {fechado ? "● encerrada" : buscando ? "● buscando" : vazio ? "○ sem disponíveis" : vivo ? "● ao vivo" : "○ reconectando…"}
         </span>
       </div>
 
@@ -196,13 +201,24 @@ export default function PainelPedido({
         </div>
       )}
 
-      {semInteresse && (
+      {aguardando && (
         <div className="busca-vivo" style={{ marginTop: 10 }}>
           <span className="busca-dot" />
           <div>
             <b>Convites enviados.</b>
             <br />
             <small>Agora é aguardar. Os profissionais vão respondendo e aparecem aqui sozinhos.</small>
+          </div>
+        </div>
+      )}
+
+      {vazio && (
+        <div className="reserva" style={{ marginTop: 10, background: "#f7f6f2", borderColor: "#e6e3d8" }}>
+          <span className="ic" style={{ color: "#8c8884" }}>○</span>
+          <div>
+            <b>Nenhum profissional disponível para esses critérios agora.</b>
+            <br />
+            <small style={{ color: "#7a7b7e" }}>Tente ampliar o valor da diária, mudar o horário ou a data e buscar de novo. Não é avaliação negativa de ninguém — é só o que está disponível neste momento.</small>
           </div>
         </div>
       )}
@@ -300,12 +316,12 @@ export default function PainelPedido({
       {erro && <div style={{ marginTop: 10, color: "#b4452f", fontSize: 13 }}>{erro}</div>}
 
       <div style={{ marginTop: 14, display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
-        {!fechado && (
+        {!fechado && !vazio && (
           <button className="fechar-btn" disabled={busy === "fechar"} onClick={fechar}>
             {busy === "fechar" ? "Encerrando…" : "Fechar agora"}
           </button>
         )}
-        {!buscando && <button className="recarregar-btn" onClick={recarregar}>Atualizar</button>}
+        {!buscando && !vazio && <button className="recarregar-btn" onClick={recarregar}>Atualizar</button>}
         {onNovaBusca && <button className="recarregar-btn" onClick={onNovaBusca}>Nova busca</button>}
       </div>
     </section>
