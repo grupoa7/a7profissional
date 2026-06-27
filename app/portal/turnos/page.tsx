@@ -7,7 +7,7 @@ import "../portal.css";
 import { getSession, isDogfood } from "@/lib/auth";
 import { isActiveSubscriber } from "@/lib/db";
 import { lerTurnosParaAvaliar } from "@/lib/avaliacao";
-import { BrandMark } from "@/app/components/BrandMark";
+import { PortalNav } from "@/app/components/PortalNav";
 
 export const metadata: Metadata = {
   title: "A7Pro · Turnos a avaliar",
@@ -40,14 +40,7 @@ export default async function TurnosPage() {
 
   return (
     <>
-      <header>
-        <div className="hd">
-          <div className="logo"><BrandMark size={24} sub="Turnos a avaliar" /></div>
-          <div className="who">{session.email} · <b>Plano Fundador</b><br />
-            <a href="/portal" style={{ color: "#9b9c9e", fontSize: 11.5 }}>← Voltar à busca</a> · <a href="/portal/pedidos" style={{ color: "#9b9c9e", fontSize: 11.5 }}>Meus pedidos</a> · <a href="/api/auth/sair" style={{ color: "#9b9c9e", fontSize: 11.5 }}>Sair</a>
-          </div>
-        </div>
-      </header>
+      <PortalNav email={session.email} atual="/portal/turnos" sub="Turnos a avaliar" />
 
       <main className="wrap">
         <section className="intro" style={{ paddingBottom: 4 }}>

@@ -4,11 +4,14 @@ import "./portal.css";
 import { getTalentCards, type TalentCard } from "@/lib/talent";
 import { getSession, isDogfood } from "@/lib/auth";
 import { isActiveSubscriber } from "@/lib/db";
+import { lerPedidoVivo } from "@/lib/pedidos";
+import { lerPainel, type PainelPedido } from "@/lib/selecao";
+import { PortalNav } from "@/app/components/PortalNav";
 import { Vitrine } from "./Vitrine";
 
 // Fora dos buscadores.
 export const metadata: Metadata = {
-  title: "A7Pro · Banco de Talentos — Portal da Empresa",
+  title: "A7Pro · Banco de Talentos · Portal da Empresa",
   robots: { index: false, follow: false },
 };
 
@@ -37,14 +40,19 @@ export default async function PortalPage() {
   }
   const funcoes = Array.from(new Set(cards.map((c) => c.funcao).filter((f): f is string => !!f))).sort();
 
+  // S7: continuidade da busca — se a empresa já tem um pedido VIVO (buscando/aberto),
+  // pré-carrega o painel pra ele reaparecer inline mesmo depois de um refresh.
+  let painelInicial: PainelPedido | null = null;
+  try {
+    const vivoId = await lerPedidoVivo("Blue");
+    if (vivoId) painelInicial = await lerPainel(vivoId);
+  } catch {
+    /* sem pedido vivo / banco indisponível — segue só com o form */
+  }
+
   return (
     <>
-      <header>
-        <div className="hd">
-          <div className="logo"><span className="mk">a7</span>pro <span className="sub">Banco de Talentos</span></div>
-          <div className="who">{session.email} · <b>Plano Fundador</b><br /><a href="/portal/pedidos" style={{ color: "#9b9c9e", fontSize: 11.5 }}>Meus pedidos</a> · <a href="/portal/turnos" style={{ color: "#9b9c9e", fontSize: 11.5 }}>Turnos a avaliar</a> · <a href="/api/auth/sair" style={{ color: "#9b9c9e", fontSize: 11.5 }}>Sair</a></div>
-        </div>
-      </header>
+      <PortalNav email={session.email} atual="/portal" sub="Banco de Talentos" />
 
       <main className="wrap">
         <section className="intro">
@@ -61,14 +69,14 @@ export default async function PortalPage() {
           </div>
         )}
 
-        <Vitrine funcoes={funcoes} />
+        <Vitrine funcoes={funcoes} painelInicial={painelInicial} />
       </main>
 
       <footer>
         <div className="in">
-          <div className="row"><span className="ic">↧</span><div>Dados para <b>consulta na plataforma</b>. Exportar, copiar, fotografar ou armazenar fora do A7Pro é vedado pelo contrato de adesão.</div></div>
-          <div className="row"><span className="ic">○</span><div>Profissionais abaixo do padrão de exibição <b>simplesmente não aparecem</b>, sem nenhuma marca ou aviso. Ausência de perfil não é avaliação negativa.</div></div>
-          <div className="row"><span className="ic">✓</span><div>Nome completo, telefone, WhatsApp e e-mail são liberados <b>somente após o profissional aceitar</b> a sua oportunidade.</div></div>
+          <div className="row"><span className="ic">↧</span><div>Dados para <b>consulta na plataforma</b>. Copiar, exportar ou fotografar fora do A7Pro é vedado pelo contrato.</div></div>
+          <div className="row"><span className="ic">○</span><div>Quem está abaixo do padrão de exibição <b>não aparece</b>, sem marca nem aviso. Ausência de perfil não é avaliação negativa.</div></div>
+          <div className="row"><span className="ic">✓</span><div>Nome, telefone e e-mail são liberados <b>só depois que o profissional aceita</b>.</div></div>
         </div>
       </footer>
     </>
