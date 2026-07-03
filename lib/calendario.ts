@@ -37,6 +37,10 @@ const SB = {
   dias: "dias_disponiveis",
   valSegSex: "valor_diaria_seg_sex_r",
   valFds: "valor_diaria_sab_dom_feriado_r",
+  // janela EXATA declarada no form de inscrição (03/07/2026) — preferida sobre os
+  // turnos quadrados antigos; o form agora pergunta "das X às Y" igual a esta tela.
+  horaIni: "hora_inicio_disponivel",
+  horaFim: "hora_fim_disponivel",
 } as const;
 
 export type DisponibilidadeView = {
@@ -155,7 +159,11 @@ async function lerSemente(card: string): Promise<Semente | null> {
     if (!rec) return null;
     const diasRaw = asArray(rawVal(rec, SB.dias));
     const turnosRaw = asArray(rawVal(rec, SB.turnos));
-    const j = janelaDosTurnos(turnosRaw);
+    // Semente da janela: 1º a janela EXATA do form novo (hora_inicio/fim_disponivel);
+    // fallback = turnos quadrados antigos convertidos (registros pré-03/07/2026).
+    const hIni = asHora(rawVal(rec, SB.horaIni) as string | null);
+    const hFim = asHora(rawVal(rec, SB.horaFim) as string | null);
+    const j = hIni && hFim ? { ini: hIni, fim: hFim } : janelaDosTurnos(turnosRaw);
     return {
       nome: (rawVal(rec, SB.nome) as string | null) ?? null,
       cpf: (rawVal(rec, SB.cpf) as string | null) ?? null,
