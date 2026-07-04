@@ -15,7 +15,7 @@
 //   - Tamanho do pool: SEM teto (todos os aptos). O N só dimensiona a META MÍNIMA
 //     da lista inicial = 2x N (a empresa quer ver pelo menos o dobro do que convoca).
 import { getTalentCards } from "./talent";
-import { lerDisponibilidade } from "./calendario";
+import { lerDisponibilidade, TURNO_RANGE } from "./calendario";
 
 // Diária = 9h (8h trabalho + 1h intervalo), regra de produto selada na S2.
 export const DIARIA_MIN = 9 * 60;
@@ -129,6 +129,25 @@ export function janelaCobre(jIni: string | null, jFim: string | null, inicio: st
   return janelas.some(([x, y]) => t0 >= x && tFim <= y);
 }
 
+/**
+ * SEMENTE (decisão Hugo 04/07/2026): quando o trabalhador ainda NÃO editou o
+ * perfil-calendário (fonte="semente"), o turno marcado no form é interpretado como
+ * a janela onde a diária pode COMEÇAR — não como cobertura das 9h. Trava: a diária
+ * precisa terminar até 23:59, salvo se marcou "Madrugada" (opt-in de virar a noite).
+ * Quem editou o calendário (fonte="neon") declarou janela real → cobertura (janelaCobre).
+ */
+export function sementeCobre(turnos: string[], inicio: string): boolean {
+  const t0 = toMin(inicio);
+  if (t0 == null || !turnos.length) return false;
+  const podeComecar = turnos.some((t) => {
+    const r = TURNO_RANGE[t];
+    return !!r && t0 >= r[0] * 60 && t0 < r[1] * 60;
+  });
+  if (!podeComecar) return false;
+  // fim ≤ 23:59 para quem não topa madrugada
+  return turnos.includes("Madrugada") || t0 + DIARIA_MIN <= 1440;
+}
+
 export function diaSemanaDe(data: string): string {
   const [y, mo, da] = data.split("-").map(Number);
   return DOW_EXT[new Date(y, mo - 1, da).getDay()];
@@ -198,10 +217,17 @@ export async function montarPool(pedido: PedidoInput): Promise<PoolResult> {
       continue;
     }
 
-    // 4) janela cobre as 9h a partir do início
-    if (!janelaCobre(d.horaInicio, d.horaFim, pedido.inicio)) {
-      const j = d.horaInicio && d.horaFim ? `${d.horaInicio}–${d.horaFim}` : "sem janela";
-      descartados.push({ card: c.id, nomeParcial: c.nomeParcial, motivo: `janela ${j} não cobre ${pedido.inicio}–${fim} (9h)` });
+    // 4) horário — regra por fonte (decisão Hugo 04/07/2026):
+    //    semente = turno marcado é janela de INÍCIO (fim ≤ 23:59 salvo Madrugada);
+    //    neon    = janela editada pelo trabalhador precisa COBRIR as 9h.
+    const horarioOk = d.fonte === "semente"
+      ? sementeCobre(c.turnos, pedido.inicio)
+      : janelaCobre(d.horaInicio, d.horaFim, pedido.inicio);
+    if (!horarioOk) {
+      const j = d.fonte === "semente"
+        ? (c.turnos.length ? `turnos ${c.turnos.join("/")}` : "sem turnos")
+        : (d.horaInicio && d.horaFim ? `janela ${d.horaInicio}–${d.horaFim}` : "sem janela");
+      descartados.push({ card: c.id, nomeParcial: c.nomeParcial, motivo: `${j} não permite ${pedido.inicio}–${fim} (9h)` });
       continue;
     }
 
@@ -228,7 +254,9 @@ export async function montarPool(pedido: PedidoInput): Promise<PoolResult> {
       porque: [
         exato ? `função bate (${c.funcao})` : `função relacionada (${c.funcao})`,
         `disponível ${dia}`,
-        `janela ${d.horaInicio}–${d.horaFim} cobre ${pedido.inicio}–${fim}`,
+        d.fonte === "semente"
+          ? `turnos ${c.turnos.join("/")} permitem começar às ${pedido.inicio}`
+          : `janela ${d.horaInicio}–${d.horaFim} cobre ${pedido.inicio}–${fim}`,
         `aceita R$${rate} ≤ R$${pedido.valor}`,
         `selo ${c.selo}`,
       ],
