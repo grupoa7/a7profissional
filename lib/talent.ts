@@ -12,6 +12,9 @@ const S = {
   rating: "rating",
   turnos: "turnos_disponiveis",
   dias: "dias_disponiveis",
+  // janela exata (form 03/07 ou write-back do calendário) — conta como disponibilidade
+  horaIni: "hora_inicio_disponivel",
+  horaFim: "hora_fim_disponivel",
   valSegSex: "valor_diaria_seg_sex_r",
   valFds: "valor_diaria_sab_dom_feriado_r",
   dataPrefs: "data_da_declaracao_de_prefs",
@@ -34,6 +37,15 @@ const SELOS_EXIBIVEIS = new Set(["A", "AA", "AAA", "B", "NOVATA"]);
 // Valor interno do banco: função ainda não classificada. NUNCA vira filtro na vitrine
 // nem aparece pra empresa — o card carrega como se a função fosse null até o Hugo conferir.
 const FUNCAO_A_CONFERIR = "A CONFERIR";
+// ESCOPO CONVOCÁVEL (sessão de enquadramento, Hugo 04/07/2026): funções que podem virar
+// pedido de diária no portal. Fora daqui: Auxiliar Administrativo (não é diária operacional)
+// e Operador de Caixa (no Gran, caixa = Operador de Loja; valor legado do select).
+// O dropdown da busca = ESCOPO ∩ funções com gente exibível no banco (sem vaga-fantasma).
+export const FUNCOES_CONVOCAVEIS = new Set([
+  "Operador de Loja", "Repositor", "Auxiliar de Serviços Gerais", "Auxiliar de Limpeza",
+  "Auxiliar de Produção", "Recepcionista / Atendente", "Garçom", "Bartender",
+  "Cozinheiro", "Auxiliar de Cozinha", "Maître",
+]);
 // Frescor (CX 4): começa folgado e aperta com dado real. Calibrável.
 export const FRESHNESS_DAYS = 45;
 
@@ -121,7 +133,12 @@ function exibivel(node: RawRecord): boolean {
 
   const dias = asArray(rawVal(node, S.dias));
   const turnos = asArray(rawVal(node, S.turnos));
-  if (!dias.length || !turnos.length) return false; // sem disponibilidade declarada
+  // Disponibilidade declarada = turnos marcados OU janela exata de horas (write-back do
+  // calendário / form 03/07). Decisão Hugo 04/07/2026 (resgate dos 23 do incidente do form):
+  // a exigência de disponibilidade DECLARADA não relaxa — muda só a forma aceita.
+  const hIni = (rawVal(node, S.horaIni) as string | null)?.trim();
+  const hFim = (rawVal(node, S.horaFim) as string | null)?.trim();
+  if (!dias.length || !(turnos.length || (hIni && hFim))) return false;
 
   const data = rawVal(node, S.dataPrefs) as string | null;
   if (!data || diasDesde(data) > FRESHNESS_DAYS) return false; // frescor (CX 4)
