@@ -12,6 +12,9 @@ const S = {
   rating: "rating",
   turnos: "turnos_disponiveis",
   dias: "dias_disponiveis",
+  // janela exata (form 03/07 ou write-back do calendário) — conta como disponibilidade
+  horaIni: "hora_inicio_disponivel",
+  horaFim: "hora_fim_disponivel",
   valSegSex: "valor_diaria_seg_sex_r",
   valFds: "valor_diaria_sab_dom_feriado_r",
   dataPrefs: "data_da_declaracao_de_prefs",
@@ -130,7 +133,12 @@ function exibivel(node: RawRecord): boolean {
 
   const dias = asArray(rawVal(node, S.dias));
   const turnos = asArray(rawVal(node, S.turnos));
-  if (!dias.length || !turnos.length) return false; // sem disponibilidade declarada
+  // Disponibilidade declarada = turnos marcados OU janela exata de horas (write-back do
+  // calendário / form 03/07). Decisão Hugo 04/07/2026 (resgate dos 23 do incidente do form):
+  // a exigência de disponibilidade DECLARADA não relaxa — muda só a forma aceita.
+  const hIni = (rawVal(node, S.horaIni) as string | null)?.trim();
+  const hFim = (rawVal(node, S.horaFim) as string | null)?.trim();
+  if (!dias.length || !(turnos.length || (hIni && hFim))) return false;
 
   const data = rawVal(node, S.dataPrefs) as string | null;
   if (!data || diasDesde(data) > FRESHNESS_DAYS) return false; // frescor (CX 4)
