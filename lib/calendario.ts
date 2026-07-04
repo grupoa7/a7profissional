@@ -20,9 +20,10 @@ export const DIAS_CANON = [
   "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado", "Domingo",
 ] as const;
 
-// Mapa de SEMENTE: turno antigo do Pipefy → faixa horária aproximada [início,fim] (h 0-24).
-// Só serve pra pré-marcar a janela na 1ª vez; o trabalhador ajusta.
-const TURNO_RANGE: Record<string, [number, number]> = {
+// Mapa de SEMENTE: turno do Pipefy → faixa horária [início,fim] (h 0-24).
+// Usos: (a) pré-marcar a janela do calendário na 1ª vez; (b) match com fonte=semente
+// (decisão Hugo 04/07/2026): o turno marcado é a janela onde a diária pode COMEÇAR.
+export const TURNO_RANGE: Record<string, [number, number]> = {
   "Manhã": [6, 12],
   "Tarde": [12, 18],
   "Noite": [18, 24],
@@ -285,6 +286,27 @@ export async function salvarDisponibilidade(
       esmaecido     = false,
       atualizado_em = now()
   `;
+
+  // WRITE-BACK (decisão Hugo 04/07/2026): espelha a declaração no banco Pipefy —
+  // mantém a semente sincronizada, renova o frescor (data_da_declaracao_de_prefs) e
+  // destrava o gate de EXIBÍVEL (turnos OU janela declarada) pros resgatados do
+  // incidente do form. Falha aqui NÃO derruba o save: o Neon é o dono vivo; o
+  // Pipefy é espelho — a próxima gravação re-sincroniza.
+  try {
+    const diasBanco = feriados && !dias.includes("Feriados") ? [...dias, "Feriados"] : dias;
+    const valores = [
+      { fieldId: SB.dias, value: diasBanco },
+      { fieldId: "data_da_declaracao_de_prefs", value: new Date().toISOString().slice(0, 10) },
+      ...(ini ? [{ fieldId: SB.horaIni, value: ini }] : []),
+      ...(fim ? [{ fieldId: SB.horaFim, value: fim }] : []),
+    ];
+    await pipefyQuery(
+      `mutation($i:UpdateFieldsValuesInput!){ updateFieldsValues(input:$i){ clientMutationId } }`,
+      { i: { nodeId: card, values: valores } },
+    );
+  } catch (e) {
+    console.warn("[calendario] write-back Pipefy falhou (Neon segue como dono):", e);
+  }
 
   return {
     card,
