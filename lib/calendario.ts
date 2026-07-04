@@ -287,6 +287,27 @@ export async function salvarDisponibilidade(
       atualizado_em = now()
   `;
 
+  // WRITE-BACK (decisão Hugo 04/07/2026): espelha a declaração no banco Pipefy —
+  // mantém a semente sincronizada, renova o frescor (data_da_declaracao_de_prefs) e
+  // destrava o gate de EXIBÍVEL (turnos OU janela declarada) pros resgatados do
+  // incidente do form. Falha aqui NÃO derruba o save: o Neon é o dono vivo; o
+  // Pipefy é espelho — a próxima gravação re-sincroniza.
+  try {
+    const diasBanco = feriados && !dias.includes("Feriados") ? [...dias, "Feriados"] : dias;
+    const valores = [
+      { fieldId: SB.dias, value: diasBanco },
+      { fieldId: "data_da_declaracao_de_prefs", value: new Date().toISOString().slice(0, 10) },
+      ...(ini ? [{ fieldId: SB.horaIni, value: ini }] : []),
+      ...(fim ? [{ fieldId: SB.horaFim, value: fim }] : []),
+    ];
+    await pipefyQuery(
+      `mutation($i:UpdateFieldsValuesInput!){ updateFieldsValues(input:$i){ clientMutationId } }`,
+      { i: { nodeId: card, values: valores } },
+    );
+  } catch (e) {
+    console.warn("[calendario] write-back Pipefy falhou (Neon segue como dono):", e);
+  }
+
   return {
     card,
     nome: primeiroNome(semente?.nome ?? null),
