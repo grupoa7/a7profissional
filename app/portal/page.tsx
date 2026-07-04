@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import "./portal.css";
-import { getTalentCards, type TalentCard } from "@/lib/talent";
+import { getTalentCards, FUNCOES_CONVOCAVEIS, type TalentCard } from "@/lib/talent";
 import { getSession, isDogfood } from "@/lib/auth";
 import { isActiveSubscriber } from "@/lib/db";
 import { lerPedidoVivo } from "@/lib/pedidos";
@@ -38,7 +38,12 @@ export default async function PortalPage() {
   } catch {
     erro = true;
   }
-  const funcoes = Array.from(new Set(cards.map((c) => c.funcao).filter((f): f is string => !!f))).sort();
+  // Dropdown travado no ESCOPO CONVOCÁVEL (Hugo 04/07/2026) ∩ funções com gente no banco:
+  // função fora do escopo (ex. administrativo) nunca vira opção, e escopo sem gente não
+  // aparece como vaga-fantasma.
+  const funcoes = Array.from(new Set(
+    cards.map((c) => c.funcao).filter((f): f is string => !!f && FUNCOES_CONVOCAVEIS.has(f)),
+  )).sort();
 
   // S7: continuidade da busca — se a empresa já tem um pedido VIVO (buscando/aberto),
   // pré-carrega o painel pra ele reaparecer inline mesmo depois de um refresh.
