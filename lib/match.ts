@@ -218,14 +218,15 @@ export async function montarPool(pedido: PedidoInput): Promise<PoolResult> {
     }
 
     // 4) horário — regra por fonte (decisão Hugo 04/07/2026):
-    //    semente = turno marcado é janela de INÍCIO (fim ≤ 23:59 salvo Madrugada);
-    //    neon    = janela editada pelo trabalhador precisa COBRIR as 9h.
-    const horarioOk = d.fonte === "semente"
+    //    semente COM turnos = turno marcado é janela de INÍCIO (fim ≤ 23:59 salvo Madrugada);
+    //    semente SEM turnos (janela padrão/form 03/07) e neon = janela precisa COBRIR as 9h.
+    const usaTurnos = d.fonte === "semente" && c.turnos.length > 0;
+    const horarioOk = usaTurnos
       ? sementeCobre(c.turnos, pedido.inicio)
       : janelaCobre(d.horaInicio, d.horaFim, pedido.inicio);
     if (!horarioOk) {
-      const j = d.fonte === "semente"
-        ? (c.turnos.length ? `turnos ${c.turnos.join("/")}` : "sem turnos")
+      const j = usaTurnos
+        ? `turnos ${c.turnos.join("/")}`
         : (d.horaInicio && d.horaFim ? `janela ${d.horaInicio}–${d.horaFim}` : "sem janela");
       descartados.push({ card: c.id, nomeParcial: c.nomeParcial, motivo: `${j} não permite ${pedido.inicio}–${fim} (9h)` });
       continue;
@@ -254,7 +255,7 @@ export async function montarPool(pedido: PedidoInput): Promise<PoolResult> {
       porque: [
         exato ? `função bate (${c.funcao})` : `função relacionada (${c.funcao})`,
         `disponível ${dia}`,
-        d.fonte === "semente"
+        usaTurnos
           ? `turnos ${c.turnos.join("/")} permitem começar às ${pedido.inicio}`
           : `janela ${d.horaInicio}–${d.horaFim} cobre ${pedido.inicio}–${fim}`,
         `aceita R$${rate} ≤ R$${pedido.valor}`,
